@@ -3,11 +3,13 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
-import { SESSION_COOKIE, adminConfig, checkCredentials, signSession } from "@/lib/admin/token";
+import { SESSION_COOKIE, SIGNED_IN_FLAG, adminConfig, checkCredentials, signSession } from "@/lib/admin/token";
 
 export interface LoginState {
   error?: string;
   username?: string;
+  /** Where the browser should load next after a successful sign-in */
+  next?: string;
 }
 
 const WINDOW_MS = 15 * 60 * 1000;
@@ -65,5 +67,10 @@ export async function login(_prev: LoginState, fd: FormData): Promise<LoginState
     ...(remember ? { maxAge } : {}),
   });
   await audit(username.trim(), "signed in", { ip, remember });
-  redirect(next);
+  // The flag lets the proxy tell "cookie was refused by the browser" apart from "signed out".
+  const target = `${next}${next.includes("?") ? "&" : "?"}${SIGNED_IN_FLAG}=1`;
+  // With JavaScript the browser loads the target itself, so the proxy sees exactly the cookies it kept.
+  // (A redirect() here is rendered on the server with the new cookie and would hide a refused cookie.)
+  if (fd.get("js") === "1") return { next: target };
+  redirect(target);
 }

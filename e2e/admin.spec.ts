@@ -58,6 +58,27 @@ test.describe("admin auth", () => {
     await page.goto("/admin");
     await expect(page).toHaveURL(/\/admin\/login/);
   });
+
+  test("a browser that refuses the session cookie is told why sign-in did not stick", async ({ page, context }) => {
+    // Act like a browser or extension that blocks the cookie: drop it as soon as the sign-in response arrives.
+    await page.route("**/admin/login*", async (route) => {
+      if (route.request().method() !== "POST") return route.continue();
+      const response = await route.fetch();
+      await context.clearCookies({ name: "ovdc_admin" });
+      const headers = { ...response.headers() };
+      delete headers["set-cookie"];
+      await route.fulfill({ response, headers });
+    });
+    await page.goto("/admin/projects");
+    await page.getByLabel("Username").fill(USER);
+    await page.getByLabel("Password", { exact: true }).fill(PASS);
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await expect(page).toHaveURL(/\/admin\/login\?.*cookie=blocked/);
+    await expect(page.locator("#lg-cookie")).toContainText("not keeping the sign-in cookie");
+    // The page to return to survives, without the internal flag.
+    expect(new URL(page.url()).searchParams.get("next")).toBe("/admin/projects");
+    await page.screenshot({ path: `${SHOTS}/login-cookie-blocked.png` });
+  });
 });
 
 test.describe("admin console", () => {

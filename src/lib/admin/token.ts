@@ -6,6 +6,8 @@
  * every existing session out.
  */
 export const SESSION_COOKIE = "ovdc_admin";
+/** Added to the first URL after a successful sign-in; see proxy.ts. */
+export const SIGNED_IN_FLAG = "signedin";
 
 export interface AdminSession {
   /** username */
