@@ -1,18 +1,27 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { ArrowRight, CircleAlert, Eye, EyeOff, LoaderCircle, ShieldCheck } from "lucide-react";
 import { login, type LoginState } from "./actions";
 
+/**
+ * Rendered into the static HTML, so the fields and button show even before
+ * (or without) JavaScript. Reading the URL with useSearchParams() here would
+ * turn the whole form into client-only output behind a loading placeholder.
+ */
 export function LoginForm({ configured }: { configured: boolean }) {
-  const next = useSearchParams().get("next") ?? "";
   const [state, action, pending] = useActionState<LoginState, FormData>(login, {});
   const [show, setShow] = useState(false);
+  const nextRef = useRef<HTMLInputElement>(null);
+
+  // The page to return to after signing in (?next=…), filled in once the page loads.
+  useEffect(() => {
+    if (nextRef.current) nextRef.current.value = new URLSearchParams(window.location.search).get("next") ?? "";
+  }, []);
 
   return (
     <form action={action} style={{ display: "flex", flexDirection: "column", gap: 16 }} noValidate>
-      <input type="hidden" name="next" value={next} />
+      <input ref={nextRef} type="hidden" name="next" defaultValue="" />
       {!configured && (
         <div role="alert" className="ad-tag ad-tag-warn" style={{ whiteSpace: "normal", padding: "10px 12px", fontSize: 13 }}>
           Set ADMIN_USERNAME, ADMIN_PASSWORD and ADMIN_SESSION_SECRET (32+ characters) in the environment to enable sign-in.

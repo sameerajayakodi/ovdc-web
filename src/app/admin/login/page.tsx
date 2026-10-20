@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Suspense } from "react";
 import { Wordmark } from "@/components/admin/AdminRoot";
 import { ThemeButton } from "@/components/admin/Shell";
 import { adminConfig } from "@/lib/admin/token";
@@ -27,9 +26,7 @@ export default function LoginPage() {
           <p className="ad-muted" style={{ margin: "0 0 28px" }}>
             Manage projects, unit inventory and availability for ovdc.lk.
           </p>
-          <Suspense fallback={<div className="ad-skel" style={{ height: 260 }} />}>
-            <LoginForm configured={configured} />
-          </Suspense>
+          <LoginForm configured={configured} />
         </div>
         <div className={s.foot}>
           <span>© 2026 OVDC Property Developers (Pvt) Ltd</span>
