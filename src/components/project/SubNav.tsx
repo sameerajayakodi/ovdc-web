@@ -17,9 +17,15 @@ export function SubNav({ items }: { items: [string, string][] }) {
     return () => io.disconnect();
   }, []);
 
-  // Keep the active tab visible on narrow screens.
+  // Keep the active tab visible on narrow screens. Scroll only the tab strip:
+  // scrollIntoView() would also scroll the page and make it jump mid-scroll.
   useEffect(() => {
-    navRef.current?.querySelector<HTMLElement>('[aria-current="location"]')?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    const nav = navRef.current;
+    const tab = nav?.querySelector<HTMLElement>('[aria-current="location"]');
+    if (!nav || !tab || nav.scrollWidth <= nav.clientWidth) return;
+    const t = tab.getBoundingClientRect();
+    const n = nav.getBoundingClientRect();
+    if (t.left < n.left || t.right > n.right) nav.scrollTo({ left: nav.scrollLeft + (t.left - n.left) - (n.width - t.width) / 2, behavior: "smooth" });
   }, [cur]);
 
   return (

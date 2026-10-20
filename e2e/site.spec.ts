@@ -47,9 +47,10 @@ test.describe("every page renders cleanly", () => {
       expect(res?.status()).toBe(200);
       await expect(page.locator("h1").first()).toHaveText(heading);
       await expect(page).toHaveTitle(/OVDC/);
-      // one h1, and every image has alt text (decorative images use alt="")
-      expect(await page.locator("h1").count()).toBe(1);
-      expect(await page.locator("img:not([alt])").count()).toBe(0);
+      // One h1, and every image has alt text (decorative images use alt="").
+      // Retrying: while a Suspense boundary streams in, its content waits in a hidden copy next to the fallback.
+      await expect(page.locator("h1")).toHaveCount(1);
+      await expect(page.locator("img:not([alt])")).toHaveCount(0);
       expect(errors).toEqual([]);
     });
   }
@@ -72,6 +73,21 @@ test.describe("navigation & preferences", () => {
     await menu.click();
     await expect(page).toHaveURL(/\/projects\/the-marine-crest$/);
     await expect(page.getByRole("heading", { level: 1, name: "The Marine Crest" })).toBeVisible();
+  });
+
+  test("saved preferences hydrate without a mismatch", async ({ page }) => {
+    // A returning visitor who picked USD but has not answered the cookie banner yet.
+    await page.addInitScript(() => {
+      localStorage.setItem("ovdc.currency", "USD");
+      localStorage.removeItem("ovdc.cookies");
+    });
+    const errors = watchErrors(page);
+    for (const path of ["/", "/projects/ocean-view-residences"]) {
+      await page.goto(path);
+      await expect(page.getByRole("region", { name: "Cookie consent" })).toBeVisible();
+      await expect(page.getByText(/USD [\d.,]+/).first()).toBeVisible();
+    }
+    expect(errors).toEqual([]);
   });
 
   test("currency switch converts prices and persists across pages", async ({ page }) => {

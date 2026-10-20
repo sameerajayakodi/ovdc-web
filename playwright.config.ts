@@ -28,14 +28,15 @@ export default defineConfig({
     },
   },
   projects: [
-    { name: "desktop", use: { ...devices["Desktop Chrome"], channel: "chrome", viewport: { width: 1440, height: 900 } }, testIgnore: /(mobile|content)\.spec\.ts/ },
+    { name: "desktop", use: { ...devices["Desktop Chrome"], channel: "chrome", viewport: { width: 1440, height: 900 } }, testIgnore: /(mobile|admin|content)\.spec\.ts/ },
     { name: "mobile", use: { ...devices["Pixel 7"], channel: "chrome" }, testMatch: /mobile\.spec\.ts/ },
-    // Media, floor plans and tours publish changes that refresh the website's cached pages,
-    // so they run after the site tests instead of alongside them.
+    // Tests that edit what the website shows (unit status, projects, floor plans, tours, media)
+    // invalidate its cached pages. Run them after the public-site tests, so no site test is
+    // navigating while the page it is opening regenerates.
     {
-      name: "content",
+      name: "writes",
       use: { ...devices["Desktop Chrome"], channel: "chrome", viewport: { width: 1440, height: 900 } },
-      testMatch: /content\.spec\.ts/,
+      testMatch: /(admin|content)\.spec\.ts/,
       dependencies: ["desktop", "mobile"],
     },
   ],

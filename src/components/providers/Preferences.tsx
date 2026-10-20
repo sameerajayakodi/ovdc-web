@@ -60,23 +60,19 @@ interface Prefs {
   setCookieConsent: (v: "all" | "essential") => void;
 }
 
-const Ctx = createContext<Prefs | null>(null);
+function parseList(raw: string): string[] {
+  try {
+    const v = JSON.parse(raw);
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Only the toast lives in context; stored values are read by each component (see usePrefs). */
+const Ctx = createContext<{ toast: (msg: string) => void } | null>(null);
 
 export function PreferencesProvider({ children }: { children: React.ReactNode }) {
-  const rawCur = useStored("ovdc.currency", "LKR");
-  const currency = (CURRENCIES.includes(rawCur as Currency) ? rawCur : "LKR") as Currency;
-  const rawList = useStored("ovdc.shortlist", "[]");
-  const shortlist = useMemo<string[]>(() => {
-    try {
-      const v = JSON.parse(rawList);
-      return Array.isArray(v) ? v : [];
-    } catch {
-      return [];
-    }
-  }, [rawList]);
-
-  const cookieConsent = useStored("ovdc.cookies", "pending", "unknown") as Prefs["cookieConsent"];
-
   const [msg, setMsg] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const toast = useCallback((m: string) => {
@@ -86,22 +82,7 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
   }, []);
   useEffect(() => () => clearTimeout(timer.current), []);
 
-  const value = useMemo<Prefs>(
-    () => ({
-      currency,
-      setCurrency: (c) => write("ovdc.currency", c),
-      shortlist,
-      toggleShortlist: (id) => {
-        const on = !shortlist.includes(id);
-        write("ovdc.shortlist", JSON.stringify(on ? [...shortlist, id] : shortlist.filter((x) => x !== id)));
-        return on;
-      },
-      toast,
-      cookieConsent,
-      setCookieConsent: (v) => write("ovdc.cookies", v),
-    }),
-    [currency, shortlist, toast, cookieConsent],
-  );
+  const value = useMemo(() => ({ toast }), [toast]);
 
   return (
     <Ctx.Provider value={value}>
@@ -118,8 +99,38 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
   );
 }
 
-export function usePrefs() {
-  const v = useContext(Ctx);
-  if (!v) throw new Error("usePrefs must be used inside <PreferencesProvider>");
-  return v;
+/**
+ * Currency, shortlist and cookie choice, read in the calling component itself.
+ * Each component hydrates with the server's value and switches to the
+ * browser's stored value right after. Passing the stored values down through
+ * context instead made Suspense boundaries that hydrate late (the dock, prices)
+ * see the browser value during hydration, which no longer matched the HTML.
+ */
+export function usePrefs(): Prefs {
+  const ctx = useContext(Ctx);
+  if (!ctx) throw new Error("usePrefs must be used inside <PreferencesProvider>");
+  const rawCur = useStored("ovdc.currency", "LKR");
+  const currency = (CURRENCIES.includes(rawCur as Currency) ? rawCur : "LKR") as Currency;
+  const rawList = useStored("ovdc.shortlist", "[]");
+  const shortlist = useMemo(() => parseList(rawList), [rawList]);
+  const cookieConsent = useStored("ovdc.cookies", "pending", "unknown") as Prefs["cookieConsent"];
+  const { toast } = ctx;
+  return useMemo<Prefs>(
+    () => ({
+      currency,
+      setCurrency: (c) => write("ovdc.currency", c),
+      shortlist,
+      toggleShortlist: (id) => {
+        // The latest list, not this render's copy.
+        const cur = parseList(memory["ovdc.shortlist"] ?? read("ovdc.shortlist") ?? "[]");
+        const on = !cur.includes(id);
+        write("ovdc.shortlist", JSON.stringify(on ? [...cur, id] : cur.filter((x) => x !== id)));
+        return on;
+      },
+      toast,
+      cookieConsent,
+      setCookieConsent: (v) => write("ovdc.cookies", v),
+    }),
+    [currency, shortlist, toast, cookieConsent],
+  );
 }

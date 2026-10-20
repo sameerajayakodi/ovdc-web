@@ -82,6 +82,8 @@ test.describe("leads inbox", () => {
   });
 
   test("add a lead, work it through the pipeline and export it", async ({ page }) => {
+    // About 15 Server Actions, each a few round trips to Neon.
+    test.setTimeout(120_000);
     const t = tag();
     const name = `E2E Kasun ${t}`;
     await expect(page.getByRole("heading", { name: "Leads", level: 1 })).toBeVisible();
@@ -126,7 +128,8 @@ test.describe("leads inbox", () => {
     await page.screenshot({ path: `${SHOTS}/leads-board.png` });
 
     await page.getByRole("button", { name: "Table" }).click();
-    await page.getByLabel("Search leads").fill(t);
+    // The full name: a bare tag can contain 3+ digits, which the search also matches against phone numbers.
+    await page.getByLabel("Search leads").fill(name);
     await expect(page.locator("tbody tr")).toHaveCount(1);
     await expect(page.locator("tbody tr")).toContainText("E2E Agent");
     const download = page.waitForEvent("download");
@@ -169,6 +172,7 @@ test.describe("leads inbox", () => {
   });
 
   test("bulk stage change from the table", async ({ page, request }) => {
+    test.setTimeout(120_000);
     const t = tag();
     await postLead(request, { name: `E2E Bulk ${t} 1`, mobile: mobile(), email: testEmail(`bulk1-${t}`) });
     await postLead(request, { name: `E2E Bulk ${t} 2`, mobile: mobile(), email: testEmail(`bulk2-${t}`) });
@@ -204,6 +208,8 @@ test.describe("leads inbox", () => {
 
 test.describe("site visits", () => {
   test("book a visit for a lead, then confirm, reschedule and complete it", async ({ page, request }) => {
+    // Booking, three status changes and two capacity edits, each a Server Action.
+    test.setTimeout(120_000);
     const t = tag();
     const name = `E2E Visitor ${t}`;
     const where = `E2E gallery ${t}`;
