@@ -1,0 +1,263 @@
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px 40px;
+  padding-top: clamp(28px, 3.4vw, 48px);
+  padding-bottom: 24px;
+}
+
+.gallery {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 4px;
+  height: 600px;
+}
+
+.galleryMain {
+  position: relative;
+  grid-row: span 2;
+}
+
+.galleryThumb {
+  position: relative;
+}
+
+.galleryNote {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--color-text-subtle);
+}
+
+.tourLaunch {
+  position: absolute;
+  left: 20px;
+  bottom: 20px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 18px 10px 10px;
+  background: var(--color-glass-dark);
+  backdrop-filter: blur(10px);
+  color: var(--color-on-navy);
+  text-decoration: none;
+}
+
+.tourLaunch:hover {
+  color: var(--color-on-navy);
+  background: var(--color-navy);
+}
+
+.tourPulse {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--color-gold);
+  animation: ovdc-pulse 2.4s ease-out infinite;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: clamp(32px, 4vw, 64px);
+  padding: 0 var(--gutter);
+}
+
+.sec {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 56px 0;
+  border-bottom: 2px solid var(--color-rule-strong);
+}
+
+.specGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 2px solid var(--color-rule-strong);
+}
+
+.specGrid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 12px 18px 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.specGrid span:first-child {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-subtle);
+}
+
+.specGrid span:last-child {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.planSplit {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+
+.planBox {
+  border: 1px solid var(--color-divider);
+  background: var(--color-white);
+}
+
+.plateWrap {
+  padding: 16px;
+  border: 1px solid var(--color-divider);
+  background: var(--color-white);
+}
+
+.finishes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+  gap: 0 32px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 2px solid var(--color-rule-strong);
+}
+
+.finishes li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--color-divider);
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.finishes strong {
+  color: var(--color-text);
+  font-size: 15px;
+}
+
+.aside {
+  position: relative;
+}
+
+.priceCard {
+  position: sticky;
+  top: 24px;
+  margin-top: 56px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-divider);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-md);
+}
+
+.priceHead {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 24px 24px 20px;
+  border-bottom: 2px solid var(--color-rule-strong);
+}
+
+.similar {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.similarGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(290px, 100%), 1fr));
+  gap: 24px;
+}
+
+.mobileBar {
+  position: sticky;
+  bottom: 0;
+  z-index: 40;
+  display: none;
+  grid-template-columns: 1fr 1fr 1.4fr;
+  gap: 1px;
+  background: var(--color-rule-dark);
+  border-top: 2px solid var(--color-gold);
+}
+
+.mobileBar a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 60px;
+  background: var(--color-navy);
+  color: var(--color-on-navy);
+  text-decoration: none;
+  font: 600 11px var(--font-label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.mobileBar a:last-child {
+  flex-direction: row;
+  justify-content: space-between;
+  padding: 0 14px;
+  background: var(--color-gold);
+  color: var(--color-navy);
+  font-size: 12px;
+}
+
+@media (max-width: 1000px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .aside {
+    order: -1;
+  }
+
+  .priceCard {
+    position: static;
+    margin-top: 32px;
+  }
+
+  .mobileBar {
+    display: grid;
+  }
+
+  .planSplit {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .gallery {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 280px 120px 120px;
+    height: auto;
+  }
+
+  .galleryMain {
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
+
+  .specGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tourLaunch {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+  }
+}

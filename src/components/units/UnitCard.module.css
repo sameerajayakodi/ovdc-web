@@ -1,0 +1,109 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-divider);
+  background: var(--color-bg);
+}
+
+.media {
+  position: relative;
+  aspect-ratio: 3 / 2;
+}
+
+.tour {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  text-decoration: none;
+}
+
+.tour:hover {
+  color: var(--color-gold);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.ref {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-subtle);
+}
+
+.title {
+  font-size: 28px;
+  line-height: 1.05;
+}
+
+.title a {
+  text-decoration: none;
+}
+
+.specs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--color-divider);
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.specs > div {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 8px;
+}
+
+.specs > div:first-child {
+  padding-left: 0;
+}
+
+.specs > div + div {
+  border-left: 1px solid var(--color-divider);
+}
+
+.specs span:first-child {
+  font-size: 11px;
+  color: var(--color-text-subtle);
+}
+
+.specs span:last-child {
+  font-size: 15px;
+}
+
+.foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sub {
+  font-size: 12px;
+  color: var(--color-text-subtle);
+}
+
+.more {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-decoration: none;
+}

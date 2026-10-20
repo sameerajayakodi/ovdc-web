@@ -1,0 +1,290 @@
+.filters {
+  position: relative;
+  z-index: 5;
+  padding: 0 var(--gutter);
+  border-top: 2px solid var(--color-rule-strong);
+  border-bottom: 1px solid var(--color-divider);
+  background: var(--color-bg);
+}
+
+.selects {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.6fr);
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.selects > :global(.field) {
+  padding: 14px 20px 10px;
+  border-right: 1px solid var(--color-divider);
+  gap: 2px;
+}
+
+.selects > :global(.field):first-child {
+  padding-left: 0;
+}
+
+.selects :global(.input) {
+  border: 0;
+  font-weight: 500;
+}
+
+.curField {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 0 10px 20px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 24px;
+  padding: 12px 0;
+}
+
+.chipGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sep {
+  width: 1px;
+  height: 24px;
+  background: var(--color-divider);
+}
+
+.clear {
+  min-height: 40px;
+  padding: 0 4px;
+  border: 0;
+  border-bottom: 1px solid var(--color-gold);
+  background: none;
+  font: 500 13px var(--font-body);
+  cursor: pointer;
+}
+
+.mobileFilters {
+  display: none;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 12px 0;
+}
+
+.mobileFilters select {
+  min-height: 48px !important;
+  padding: 0 28px 0 12px !important;
+  border: 1px solid var(--color-divider) !important;
+  width: 100% !important;
+}
+
+.filterBtn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--color-rule-strong);
+  background: none;
+  font: 600 13px var(--font-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.filterBtn span {
+  display: grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  background: var(--color-navy);
+  color: var(--color-on-navy);
+  font-size: 12px;
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px 24px;
+  padding-block: 20px;
+}
+
+.sortDesk {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gridWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+  padding: 8px var(--gutter) clamp(64px, 8vw, 112px);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr));
+  gap: 48px 24px;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  margin: 0 var(--gutter) 96px;
+  padding: clamp(32px, 5vw, 64px);
+  border: 1px dashed var(--color-divider);
+}
+
+.mapView {
+  display: grid;
+  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  height: 760px;
+  border-top: 1px solid var(--color-divider);
+}
+
+.mapList {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  border-right: 1px solid var(--color-divider);
+}
+
+.mapItem {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 16px;
+  padding: 16px clamp(16px, 2vw, 24px);
+  border: 0;
+  border-bottom: 1px solid var(--color-divider);
+  border-left: 3px solid transparent;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mapItem[aria-pressed="true"] {
+  border-left-color: var(--color-gold);
+  background: var(--color-surface);
+}
+
+.pinCard {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  z-index: 500;
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  width: min(380px, calc(100% - 32px));
+  background: var(--color-cream);
+  box-shadow: var(--shadow-lg);
+}
+
+.pinClose {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin: -8px -8px 0 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.pinLink {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+}
+
+.sheetHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 64px;
+  padding: 0 16px;
+  border-bottom: 2px solid var(--color-rule-strong);
+}
+
+.sheetClose {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--color-divider);
+  background: none;
+  cursor: pointer;
+}
+
+.sheetBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 20px 16px;
+  overflow-y: auto;
+}
+
+.sheetFoot {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: 8px;
+  padding: 12px 16px 20px;
+  border-top: 1px solid var(--color-divider);
+}
+
+@media (max-width: 1100px) {
+  .selects {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .selects > :global(.field):nth-child(3) {
+    padding-left: 0;
+  }
+
+  .curField {
+    grid-column: 1 / -1;
+    padding-left: 0;
+    border-top: 1px solid var(--color-divider);
+  }
+}
+
+@media (max-width: 760px) {
+  .desktopFilters,
+  .sortDesk {
+    display: none;
+  }
+
+  .mobileFilters {
+    display: grid;
+  }
+
+  .mapView {
+    grid-template-columns: 1fr;
+    height: 620px;
+  }
+
+  .mapList {
+    display: none;
+  }
+}

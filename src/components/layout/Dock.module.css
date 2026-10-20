@@ -1,0 +1,94 @@
+.dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 70;
+  pointer-events: none;
+}
+
+.inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  padding: clamp(12px, 2vw, 24px);
+}
+
+.cookie {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  max-width: 760px;
+  padding: 12px 12px 12px 20px;
+  background: var(--color-cream);
+  color: var(--color-navy);
+  border-top: 2px solid var(--color-navy);
+  box-shadow: var(--shadow-lg);
+}
+
+.wa {
+  pointer-events: auto;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px 8px 8px;
+  background: var(--color-navy);
+  color: var(--color-on-navy);
+  text-decoration: none;
+  box-shadow: var(--shadow-lg);
+}
+
+.wa:hover {
+  color: var(--color-on-navy);
+  background: var(--color-navy-2);
+}
+
+.waIcon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--status-available);
+}
+
+.waText {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  padding-right: 6px;
+}
+
+@media (max-width: 760px) {
+  .inner {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .wa {
+    align-self: flex-end;
+    padding: 8px;
+  }
+
+  .waText {
+    display: none;
+  }
+
+  .cookie {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    max-width: none;
+    padding: 20px;
+  }
+}
+
+@media (max-width: 1000px) {
+  .waDesktopOnly {
+    display: none;
+  }
+}

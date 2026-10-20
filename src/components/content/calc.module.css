@@ -1,0 +1,113 @@
+.wrap {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(480px, 100%), 1fr));
+  gap: 40px clamp(32px, 4vw, 64px);
+  padding: var(--section-y) var(--gutter);
+  align-items: start;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.cardHead {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 2px solid var(--color-rule-strong);
+}
+
+.inputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 24px 32px;
+}
+
+.num {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.numRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.numRow input {
+  font-family: var(--font-heading);
+  font-size: 32px;
+  min-height: 52px;
+}
+
+.numRow span {
+  flex: none;
+  font-size: 13px;
+}
+
+.range {
+  width: 100%;
+  accent-color: var(--color-gold);
+}
+
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: clamp(24px, 3vw, 36px);
+  background: var(--color-navy);
+  color: var(--color-on-navy);
+}
+
+.big {
+  font-family: var(--font-heading);
+  font-size: clamp(44px, 5vw, 64px);
+  line-height: 1;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.split {
+  display: flex;
+  height: 8px;
+  margin: 12px 0 4px;
+}
+
+.split span:first-child {
+  background: var(--color-gold);
+}
+
+.split span:last-child {
+  background: var(--color-rule-dark-strong);
+}
+
+.dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 24px;
+  margin: 8px 0 0;
+}
+
+.dl > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 0;
+  border-top: 1px solid var(--color-rule-dark);
+}
+
+.dl dt {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-on-navy-muted);
+}
+
+.dl dd {
+  margin: 0;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}

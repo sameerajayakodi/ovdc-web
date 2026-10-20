@@ -1,0 +1,44 @@
+.slot {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #ebe8e2;
+}
+
+.round {
+  border-radius: 50%;
+}
+
+.placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px dashed rgba(15, 27, 45, 0.18);
+  background:
+    radial-gradient(120% 90% at 30% 20%, rgba(255, 255, 255, 0.55), transparent 60%),
+    #ebe8e2;
+  color: rgba(15, 27, 45, 0.5);
+  font-size: 12px;
+  text-align: center;
+}
+
+.round .placeholder {
+  border-radius: 50%;
+}
+
+.dark {
+  background: var(--color-navy-2);
+}
+
+.dark .placeholder {
+  border-color: rgba(243, 238, 228, 0.16);
+  background:
+    radial-gradient(120% 90% at 30% 20%, rgba(196, 160, 90, 0.12), transparent 60%),
+    linear-gradient(160deg, #1a2a44, #0b1422);
+  color: rgba(243, 238, 228, 0.55);
+}
