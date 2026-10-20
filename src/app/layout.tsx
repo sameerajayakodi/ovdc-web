@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Archivo, Cormorant_Garamond } from "next/font/google";
 import { PreferencesProvider } from "@/components/providers/Preferences";
 import { Reveal } from "@/components/providers/Reveal";
@@ -44,7 +45,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body>
         <PreferencesProvider>
           {children}
-          <Reveal />
+          <Suspense fallback={null}>
+            <Reveal />
+          </Suspense>
         </PreferencesProvider>
       </body>
     </html>

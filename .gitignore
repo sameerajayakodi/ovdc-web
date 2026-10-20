@@ -44,3 +44,9 @@ next-env.d.ts
 /test-results/
 /playwright-report/
 .vercel
+.env*
+
+# agent skills installed by the Neon CLI (local tooling)
+/.agents/
+/.claude/skills/
+/skills-lock.json

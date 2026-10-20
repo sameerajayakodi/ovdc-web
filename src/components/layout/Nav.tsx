@@ -36,6 +36,17 @@ function Wordmark() {
   );
 }
 
+/** Static bar shown only while a page with unknown URL data streams in. */
+export function NavFallback() {
+  return (
+    <div className={`${styles.root} ${styles.solid}`}>
+      <header className={styles.bar}>
+        <Wordmark />
+      </header>
+    </div>
+  );
+}
+
 export function Nav({ projects }: { projects: NavProject[] }) {
   const pathname = usePathname();
   const overlay = pathname === "/";

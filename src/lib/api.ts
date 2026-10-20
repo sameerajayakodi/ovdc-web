@@ -1,56 +1,140 @@
 /**
  * Data access for the public website.
  *
- * Every page reads through these functions, never from ./data directly, so
- * switching to the admin backend later only means replacing the bodies here
- * with fetch() calls (and adding `"use cache"` + cacheLife where it fits).
+ * Every page reads through these functions, never from the database or
+ * ./data directly. Projects and inventory come from Neon (edited in /admin);
+ * reads are cached with `"use cache"` and tagged so an admin change shows up
+ * on the next request (see src/app/admin/actions). Without DATABASE_URL the
+ * site falls back to the sample data in ./data.
  */
-import { inventory, unitTypes } from "./data/inventory";
-import { projects } from "./data/projects";
+import { cacheLife, cacheTag } from "next/cache";
+import { asc, eq } from "drizzle-orm";
+import { db, schema } from "@/db";
+import { inventory as sampleInventory, unitTypes } from "./data/inventory";
+import { projects as sampleProjects } from "./data/projects";
 import { featuredUnits } from "./data/content";
 import { tours } from "./data/tours";
+import { TAGS } from "./cacheTags";
+import { parseUnitRef, unitRef } from "./unitRef";
 import type { Floor, Project, Unit, UnitType, Tour } from "./types";
+import type { ProjectRow, UnitRow } from "@/db/schema";
 
-function withLiveAvailability(p: Project): Project {
-  const towers = inventory[p.slug];
-  if (!towers) return p;
-  const available = Object.values(towers).reduce(
-    (n, floors) => n + floors.reduce((m, f) => m + f.available, 0),
-    0,
-  );
-  return { ...p, available };
+export { parseUnitRef, unitRef };
+
+type Towers = Record<string, Floor[]>;
+
+/** Groups unit rows into towers → floors (top floor first), as the explorer expects. */
+export function toTowers(rows: Pick<UnitRow, keyof Omit<UnitRow, "id" | "projectSlug" | "note" | "updatedAt">>[]): Towers {
+  const towers: Record<string, Map<number, Unit[]>> = {};
+  for (const r of rows) {
+    const floors = (towers[r.tower] ??= new Map());
+    const list = floors.get(r.floor) ?? [];
+    list.push({
+      u: r.letter,
+      id: r.code,
+      tower: r.tower,
+      floor: r.floor,
+      type: r.type,
+      beds: r.beds,
+      label: r.label,
+      baths: r.baths,
+      sqft: r.sqft,
+      balcony: r.balcony,
+      facing: r.facing,
+      view: r.view,
+      status: r.status,
+      price: r.priceMn,
+    });
+    floors.set(r.floor, list);
+  }
+  const out: Towers = {};
+  for (const t of Object.keys(towers).sort()) {
+    out[t] = [...towers[t].entries()]
+      .sort((a, b) => b[0] - a[0])
+      .map(([n, units]) => {
+        units.sort((a, b) => a.u.localeCompare(b.u));
+        const avail = units.filter((u) => u.status === "A");
+        return { n, units, available: avail.length, from: avail.length ? Math.min(...avail.map((u) => u.price)) : Infinity };
+      });
+  }
+  return out;
+}
+
+function toProject(r: ProjectRow, available: number | undefined): Project {
+  return {
+    id: r.id,
+    slug: r.slug,
+    name: r.name,
+    loc: r.loc,
+    address: r.address,
+    type: r.type,
+    status: r.status,
+    from: r.fromMn,
+    tour: r.tour,
+    explorer: r.explorer,
+    progress: r.progress,
+    completion: r.completion,
+    uda: r.uda,
+    units: r.units,
+    floors: r.floors,
+    towers: r.towers,
+    beds: r.beds,
+    available: available ?? r.availableManual,
+    lat: r.lat,
+    lng: r.lng,
+    blurb: r.blurb,
+  };
+}
+
+/** Published projects with live availability from the unit inventory. */
+async function loadProjects(): Promise<Project[]> {
+  "use cache";
+  cacheTag(TAGS.projects, TAGS.inventory);
+  cacheLife("hours");
+
+  if (!db) {
+    return sampleProjects.map((p) => {
+      const towers = sampleInventory[p.slug];
+      if (!towers) return p;
+      const available = Object.values(towers).reduce((n, fl) => n + fl.reduce((m, f) => m + f.available, 0), 0);
+      return { ...p, available };
+    });
+  }
+
+  const [rows, counts] = await Promise.all([
+    db.select().from(schema.projects).where(eq(schema.projects.published, true)).orderBy(asc(schema.projects.sort), asc(schema.projects.name)),
+    db.select({ slug: schema.units.projectSlug, status: schema.units.status }).from(schema.units),
+  ]);
+  const avail = new Map<string, number>();
+  for (const c of counts) avail.set(c.slug, (avail.get(c.slug) ?? 0) + (c.status === "A" ? 1 : 0));
+  return rows.map((r) => toProject(r, avail.get(r.slug)));
 }
 
 export async function getProjects(): Promise<Project[]> {
-  return projects.map(withLiveAvailability);
+  return loadProjects();
 }
 
 export async function getProject(slug: string): Promise<Project | null> {
-  const p = projects.find((x) => x.slug === slug);
-  return p ? withLiveAvailability(p) : null;
+  return (await loadProjects()).find((x) => x.slug === slug) ?? null;
 }
 
-export async function getTowers(slug: string): Promise<Record<string, Floor[]> | null> {
-  return inventory[slug] ?? null;
+export async function getTowers(slug: string): Promise<Towers | null> {
+  "use cache";
+  cacheTag(TAGS.inventory, TAGS.inventoryOf(slug));
+  cacheLife("hours");
+
+  if (!db) return sampleInventory[slug] ?? null;
+  const rows = await db.select().from(schema.units).where(eq(schema.units.projectSlug, slug));
+  return rows.length ? toTowers(rows) : null;
 }
 
 export async function getUnitTypes(slug: string): Promise<UnitType[]> {
   return unitTypes[slug] ?? [];
 }
 
-/** Unit reference format: "<tower>-<floor><letter>", e.g. "A-14B". */
-export function parseUnitRef(ref: string) {
-  const m = /^([A-Z])-(\d+)([A-Z])$/.exec(ref.toUpperCase());
-  return m ? { tower: m[1], id: `${m[2]}${m[3]}` } : null;
-}
-
-export function unitRef(u: Pick<Unit, "tower" | "id">) {
-  return `${u.tower}-${u.id}`;
-}
-
 export async function getUnit(slug: string, ref: string): Promise<Unit | null> {
   const parsed = parseUnitRef(ref);
-  const towers = inventory[slug];
+  const towers = await getTowers(slug);
   if (!parsed || !towers?.[parsed.tower]) return null;
   for (const fl of towers[parsed.tower]) {
     const u = fl.units.find((x) => x.id === parsed.id);
@@ -60,11 +144,15 @@ export async function getUnit(slug: string, ref: string): Promise<Unit | null> {
 }
 
 export async function getAllUnitRefs(): Promise<{ slug: string; unit: string }[]> {
-  return Object.entries(inventory).flatMap(([slug, towers]) =>
-    Object.values(towers).flatMap((floors) =>
-      floors.flatMap((f) => f.units.map((u) => ({ slug, unit: unitRef(u) }))),
-    ),
-  );
+  const projects = await getProjects();
+  const out: { slug: string; unit: string }[] = [];
+  for (const p of projects) {
+    if (!p.explorer) continue;
+    const towers = await getTowers(p.slug);
+    if (!towers) continue;
+    for (const floors of Object.values(towers)) for (const f of floors) for (const u of f.units) out.push({ slug: p.slug, unit: unitRef(u) });
+  }
+  return out;
 }
 
 export async function getFeaturedUnits(): Promise<(Unit & { projectSlug: string; projectName: string })[]> {

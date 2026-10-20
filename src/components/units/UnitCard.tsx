@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Unit } from "@/lib/types";
 import { routes } from "@/lib/routes";
-import { unitRef } from "@/lib/api";
+import { unitRef } from "@/lib/unitRef";
 import { ImageSlot } from "@/components/ui/ImageSlot";
 import { photos, typePhoto } from "@/lib/data/media";
 import { UnitStatusTag } from "@/components/ui/Status";

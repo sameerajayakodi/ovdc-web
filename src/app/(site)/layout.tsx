@@ -1,4 +1,5 @@
-import { Nav } from "@/components/layout/Nav";
+import { Suspense } from "react";
+import { Nav, NavFallback } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { Dock } from "@/components/layout/Dock";
 import { getProjects } from "@/lib/api";
@@ -12,10 +13,16 @@ export default async function SiteLayout({ children }: LayoutProps<"/">) {
       <a href="#main" className="skip-link">
         Skip to content
       </a>
-      <Nav projects={navProjects} />
+      {/* Nav and Dock read the pathname; Suspense lets pages regenerated after an
+          admin edit render even when their URL is only known at request time. */}
+      <Suspense fallback={<NavFallback />}>
+        <Nav projects={navProjects} />
+      </Suspense>
       <main id="main">{children}</main>
       <Footer />
-      <Dock />
+      <Suspense fallback={null}>
+        <Dock />
+      </Suspense>
     </>
   );
 }
