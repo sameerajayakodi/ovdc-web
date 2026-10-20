@@ -57,10 +57,13 @@ export default async function ToursHubPage() {
           {tours.map((t) => (
             <Link key={t.id} href={routes.tour(t.id, routes.tours)} className={c.card}>
               <span className={`zoom ${c.media}`}>
-                <ImageSlot photo={photos[typePhoto[t.typeLabel] ?? "livingSea"]} sizes="(max-width: 760px) 100vw, 33vw" />
+                <ImageSlot
+                  photo={t.cover ? { src: t.cover, alt: t.title, ar: 1.5 } : photos[typePhoto[t.typeLabel] ?? "livingSea"]}
+                  sizes="(max-width: 760px) 100vw, 33vw"
+                />
                 <span className="badge badge-glass" style={{ position: "absolute", left: 12, top: 12 }}>
                   <Icon360 />
-                  {t.scenes.length} rooms
+                  {t.scenes.length ? `${t.scenes.length} rooms` : "Interactive tour"}
                 </span>
               </span>
               <span className="kicker">
@@ -68,11 +71,13 @@ export default async function ToursHubPage() {
               </span>
               <h3 className={c.cardTitle}>{t.title}</h3>
               <span className="muted" style={{ fontSize: 14 }}>
-                {t.scenes.map((x) => x.name).join(" · ")}
+                {t.scenes.length ? t.scenes.map((x) => x.name).join(" · ") : "Walk the whole home in 3D"}
               </span>
-              <span className="nums" style={{ fontWeight: 600 }}>
-                from <Price mn={t.price} />
-              </span>
+              {t.price > 0 && (
+                <span className="nums" style={{ fontWeight: 600 }}>
+                  from <Price mn={t.price} />
+                </span>
+              )}
             </Link>
           ))}
           {comingSoon.map((p) => (

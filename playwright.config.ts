@@ -28,8 +28,16 @@ export default defineConfig({
     },
   },
   projects: [
-    { name: "desktop", use: { ...devices["Desktop Chrome"], channel: "chrome", viewport: { width: 1440, height: 900 } }, testIgnore: /mobile\.spec\.ts/ },
+    { name: "desktop", use: { ...devices["Desktop Chrome"], channel: "chrome", viewport: { width: 1440, height: 900 } }, testIgnore: /(mobile|content)\.spec\.ts/ },
     { name: "mobile", use: { ...devices["Pixel 7"], channel: "chrome" }, testMatch: /mobile\.spec\.ts/ },
+    // Media, floor plans and tours publish changes that refresh the website's cached pages,
+    // so they run after the site tests instead of alongside them.
+    {
+      name: "content",
+      use: { ...devices["Desktop Chrome"], channel: "chrome", viewport: { width: 1440, height: 900 } },
+      testMatch: /content\.spec\.ts/,
+      dependencies: ["desktop", "mobile"],
+    },
   ],
   webServer: {
     command: `npm run start -- -p ${PORT}`,

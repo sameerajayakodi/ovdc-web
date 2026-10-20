@@ -1,0 +1,446 @@
+/* — list — */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.card {
+  position: relative;
+  background: var(--a-surface);
+  display: flex;
+  flex-direction: column;
+}
+.cardLink {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  flex: 1;
+}
+:global(.adm) a.cardLink {
+  color: var(--a-text);
+}
+.cardLink:hover .cardTitle {
+  color: var(--a-gold-text);
+}
+.cover {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: #0f1b2d;
+  color: #c4a05a;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.cover img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.cardBody {
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cardTitle {
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+.view {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 27, 45, 0.7);
+}
+:global(.adm) a.view {
+  color: #f6f3ed;
+}
+
+/* — editor — */
+.editor {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px;
+  border-bottom: 2px solid var(--a-divider);
+}
+.barTitle {
+  font-weight: 800;
+  font-size: 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.workspace {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr) 300px;
+  min-height: 0;
+}
+@media (max-width: 1280px) {
+  .workspace {
+    grid-template-columns: 230px minmax(0, 1fr);
+  }
+  .inspector {
+    grid-column: 1 / -1;
+    border-left: 0 !important;
+    border-top: 2px solid var(--a-divider);
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+}
+@media (max-width: 760px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+  .scenes {
+    border-right: 0 !important;
+    border-bottom: 2px solid var(--a-divider);
+  }
+}
+
+.scenes {
+  border-right: 2px solid var(--a-divider);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.scenesHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 12px 14px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--a-divider);
+}
+.scenesHead span {
+  font-size: 11.5px;
+}
+.sceneItem {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--a-hair);
+  border-left: 3px solid transparent;
+}
+.sceneItem[data-on] {
+  background: var(--a-accent-100);
+  border-left-color: var(--a-accent);
+}
+.sceneItem[data-drag] {
+  opacity: 0.4;
+}
+.grip {
+  padding: 0 2px 0 6px;
+  color: var(--a-muted);
+  cursor: grab;
+  display: flex;
+}
+.sceneBtn {
+  all: unset;
+  box-sizing: border-box;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px 8px 4px;
+  cursor: pointer;
+  color: var(--a-text);
+}
+.sceneBtn:focus-visible {
+  outline: 2px solid var(--a-accent);
+  outline-offset: -2px;
+}
+.sceneBtn img {
+  width: 64px;
+  height: 32px;
+  object-fit: cover;
+  flex: none;
+  background: var(--a-n200);
+}
+.sceneBtn > span {
+  display: flex;
+  flex-direction: column;
+}
+.sceneName {
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+}
+.add {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.drop {
+  border: 2px dashed var(--a-divider);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  text-align: left;
+}
+.drop:hover {
+  border-color: var(--a-accent);
+}
+.drop[data-off] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.drop:focus-within {
+  outline: 2px solid var(--a-accent);
+}
+.check {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 12px;
+  color: var(--a-danger-text);
+  line-height: 1.4;
+}
+.check[data-ok] {
+  color: var(--a-ok-text);
+}
+.check svg {
+  margin-top: 2px;
+}
+.ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.center {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.tools [data-on] {
+  background: var(--a-text);
+  color: var(--a-bg);
+}
+.coords {
+  font-size: 12px;
+  color: var(--a-muted);
+  font-variant-numeric: tabular-nums;
+}
+.canvas {
+  position: relative;
+  aspect-ratio: 2 / 1;
+  width: 100%;
+  background-color: #0f1b2d;
+  background-size: 100% 100%;
+  overflow: hidden;
+  cursor: default;
+  touch-action: none;
+  user-select: none;
+}
+.canvas[data-tool="nav"],
+.canvas[data-tool="info"],
+.canvas[data-tool="start"] {
+  cursor: crosshair;
+}
+.fov {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 20.8%;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, transparent, rgba(196, 160, 90, 0.18) 30%, rgba(196, 160, 90, 0.18) 70%, transparent);
+  border-left: 0;
+  pointer-events: none;
+}
+.fov::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  border-left: 2px dashed #c4a05a;
+}
+.fov[data-edge="left"] > span {
+  left: 50%;
+  transform: none;
+}
+.fov[data-edge="right"] > span {
+  left: auto;
+  right: 50%;
+  transform: none;
+}
+.fov > span {
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  transform: translateX(-50%);
+  background: #c4a05a;
+  color: #0f1b2d;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+}
+.marker {
+  all: unset;
+  position: absolute;
+  /* The dot (30 px) sits exactly on the hotspot; the label hangs to its right. */
+  transform: translate(-15px, -50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: grab;
+  touch-action: none;
+}
+.marker:active {
+  cursor: grabbing;
+}
+.markerDot {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #c4a05a;
+  color: #0f1b2d;
+  box-shadow: 0 0 0 3px rgba(15, 27, 45, 0.45), 0 4px 10px rgba(0, 0, 0, 0.35);
+  flex: none;
+}
+.marker[data-kind="info"] .markerDot {
+  background: #f6f3ed;
+}
+.marker[data-on] .markerDot {
+  box-shadow: 0 0 0 3px #f6f3ed, 0 0 0 6px #c4a05a;
+}
+.marker:focus-visible .markerDot {
+  outline: 2px solid #f6f3ed;
+  outline-offset: 3px;
+}
+.markerLabel {
+  background: rgba(15, 27, 45, 0.82);
+  color: #f6f3ed;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hint {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  background: rgba(15, 27, 45, 0.85);
+  color: #f6f3ed;
+  font-size: 12.5px;
+  padding: 6px 12px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.inspector {
+  border-left: 2px solid var(--a-divider);
+  background: var(--a-surface);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.panel {
+  border-bottom: 2px solid var(--a-divider);
+}
+.panelHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--a-divider);
+  font-size: 14px;
+}
+.panelBody {
+  padding: 12px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* — embed — */
+.embed {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(0, 1.4fr) 300px;
+  gap: 20px;
+  padding: 20px 24px;
+  align-items: start;
+}
+@media (max-width: 1280px) {
+  .embed {
+    grid-template-columns: 1fr;
+  }
+}
+.embedFrame {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border: 0;
+  display: block;
+  background: #0f1b2d;
+}
+.embedEmpty {
+  aspect-ratio: 16 / 10;
+  display: grid;
+  place-items: center;
+  color: var(--a-muted);
+  font-size: 13px;
+  background: var(--a-n100);
+}
+
+/* — preview — */
+.preview {
+  position: fixed;
+  inset: 0;
+  z-index: 85;
+  background: #060d18;
+  display: flex;
+  flex-direction: column;
+}
+.previewBar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--a-bg);
+  border-bottom: 2px solid var(--a-divider);
+  flex-wrap: wrap;
+}
+.previewBody {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}

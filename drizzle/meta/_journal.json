@@ -15,6 +15,13 @@
       "when": 1792467533516,
       "tag": "0001_dark_makkari",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792472709926,
+      "tag": "0002_supreme_power_pack",
+      "breakpoints": true
     }
   ]
 }

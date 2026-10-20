@@ -11,11 +11,12 @@ npm install
 npm run dev        # http://localhost:3000
 npm run build      # production build (prerenders ~290 pages)
 npm run lint
-npm run test:e2e   # 82 Playwright tests (site + admin, desktop + phone) against the production build; uses your installed Chrome
+npm run test:e2e   # Playwright tests (site + admin, desktop + phone) against the production build; uses your installed Chrome
 
 npm run db:generate  # after editing src/db/schema.ts: write a migration to ./drizzle
 npm run db:migrate   # apply migrations to Neon
 npm run db:seed      # load the sample portfolio + inventory into an empty database (--reset to wipe and reload)
+npm run db:seed-content  # copy the unit layouts (floor plans) and 360° tours from src/lib/data into Neon; skips rows that exist
 ```
 
 Stack: Next.js 16 (App Router, Cache Components), React 19, TypeScript, CSS Modules, three.js (360° viewer), Leaflet (maps),
@@ -31,6 +32,7 @@ Set in Vercel (Production, Preview, Development) and in `.env.local` for local w
 | `ADMIN_USERNAME`, `ADMIN_PASSWORD` | The single admin login |
 | `ADMIN_SESSION_SECRET` | 32+ random characters used to sign the admin session cookie |
 | `ADMIN_NAME` | Name shown in the console (optional) |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | File storage for the Media library, floor-plan drawings and 360° panoramas. Browsers upload straight to Cloudinary with a signature from a Server Action; files live under `ovdc/<project>/` |
 
 Changing `ADMIN_PASSWORD` (or the secret) signs every existing admin session out. Without `DATABASE_URL` the website falls back to the sample data in `src/lib/data`.
 
@@ -41,10 +43,15 @@ Changing `ADMIN_PASSWORD` (or the secret) signs every existing admin session out
 - **Dashboard**: live unit split, stock value, availability by tower, homes by layout, projects, recent changes
 - **Units**: floor grid / table per tower, status filter, search, type filter; single-unit panel (price, history, status, note) and bulk status / price changes; CSV export
 - **Projects**: list with filters and CSV export; editor for details, stage, pricing, location, publishing; new drafts; delete drafts
-- **Activity log**: every unit/project change and sign-in
+- **Leads**: pipeline board and table, filters, bulk stage/assign, CSV, lead drawer with notes, follow-ups, duplicate merge
+- **Site visits**: week/day/month/list calendar, booking, confirm/reschedule/complete/no-show, hourly capacity per location
+- **360° Tours**: tours list; editor with scenes (drag to reorder), panorama upload, click-to-place room links and info points on the unwrapped panorama, starting view, live 3D preview, publish; or a Matterport / Kuula embed instead
+- **Floor plans**: one layout per unit type with sizes, room dimensions (m / ft) and an uploaded drawing (image or PDF); feeds the project page, unit pages and explorer
+- **Media library**: folders per project, type filters, drag-and-drop upload with progress, alt text, where each file is used, copy URL, move, delete (Cloudinary, served as WebP/AVIF)
+- **Activity log**: every change and sign-in
 
 Edits call `updateTag()` on the cache tags in `src/lib/cacheTags.ts`, so the public pages show the change on the next request.
-Unpublished (draft) projects are hidden from the website, lists and sitemap. Menu items marked *Soon* (tours, leads, visits…) are next.
+Unpublished (draft) projects and tours are hidden from the website, lists and sitemap. Menu items marked *Soon* (sales, customers, website content, settings) are next.
 
 ## Where things live
 
@@ -52,11 +59,12 @@ Unpublished (draft) projects are hidden from the website, lists and sitemap. Men
 |---|---|
 | `src/app/(site)/` | Pages with the site nav + footer |
 | `src/app/tours/[id]` | Full-screen 360° tour (no site chrome) |
-| `src/app/api/leads` | Every form posts here — **TODO: connect to the admin CRM** |
+| `src/app/api/leads` | Every form posts here; stored in Neon for the Leads inbox (honeypot + per-IP throttle) |
 | `src/app/admin/` | Admin console (login, dashboard, units, projects, activity) and its Server Actions |
 | `src/db/` | Drizzle schema + Neon client; migrations in `drizzle/`, seed/migrate scripts in `scripts/` |
-| `src/lib/api.ts` | The website's only data access layer: cached reads from Neon (projects, inventory) with sample-data fallback |
-| `src/lib/data/` | Sample data: projects, inventory (seed source), content, tours, news, careers, media |
+| `src/lib/api.ts` | The website's only data access layer: cached reads from Neon (projects, inventory, layouts, tours) with sample-data fallback |
+| `src/lib/cloudinary.ts`, `src/lib/mediaUrl.ts` | Upload signing / deletes (server) and Cloudinary delivery URLs (anywhere) |
+| `src/lib/data/` | Sample data: projects, inventory and tours (seed sources), content, news, careers, media |
 | `src/lib/data/media.ts` | Photo registry (Unsplash stock until OVDC's own shoot) |
 | `public/tours/ovr-type-c/` | 360° panoramas (Poly Haven, CC0), 4096 × 2048 |
 | `design/` | Claude Design exports, prompts and the old Vite code backup |

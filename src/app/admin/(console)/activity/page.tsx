@@ -15,6 +15,9 @@ const FILTERS: [string, string][] = [
   ["project", "Projects"],
   ["lead", "Leads"],
   ["visit", "Visits"],
+  ["tour", "Tours"],
+  ["plan", "Floor plans"],
+  ["media", "Media"],
   ["auth", "Sign-ins"],
 ];
 
@@ -30,7 +33,7 @@ async function Activity({ searchParams }: Pick<PageProps<"/admin/activity">, "se
   await requireAdmin();
   if (!hasDb()) return <DbMissing />;
   const { type } = await searchParams;
-  const entity = (["unit", "project", "lead", "visit", "auth"] as const).find((e) => e === type);
+  const entity = (["unit", "project", "lead", "visit", "tour", "plan", "media", "auth"] as const).find((e) => e === type);
   const items: ActivityItem[] = await getActivity(200, entity);
 
   return (

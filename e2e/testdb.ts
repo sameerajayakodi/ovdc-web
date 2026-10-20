@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { neon } from "@neondatabase/serverless";
 
 /**
@@ -52,6 +53,34 @@ export async function cleanupTestRows() {
     if (Object.values(value).every((n) => n === 2)) await sql`delete from settings where key = 'visit_capacity'`;
     else await sql`update settings set value = ${JSON.stringify(value)}::jsonb where key = 'visit_capacity'`;
   }
+}
+
+/** Test uploads are named "e2e-…": delete them from Cloudinary and the library. */
+export async function cleanupTestMedia() {
+  if (!sql) return;
+  const rows = (await sql`select id, public_id, resource_type from media where name like 'e2e-%'`) as { id: number; public_id: string; resource_type: string }[];
+  const cloud = process.env.CLOUDINARY_CLOUD_NAME;
+  const key = process.env.CLOUDINARY_API_KEY;
+  const secret = process.env.CLOUDINARY_API_SECRET;
+  for (const r of rows) {
+    if (cloud && key && secret) {
+      const timestamp = Math.round(Date.now() / 1000);
+      const signature = createHash("sha1").update(`invalidate=true&public_id=${r.public_id}&timestamp=${timestamp}${secret}`).digest("hex");
+      await fetch(`https://api.cloudinary.com/v1_1/${cloud}/${r.resource_type}/destroy`, {
+        method: "POST",
+        body: new URLSearchParams({ public_id: r.public_id, timestamp: String(timestamp), invalidate: "true", api_key: key, signature }),
+      }).catch(() => {});
+    }
+  }
+  if (rows.length) {
+    const ids = rows.map((r) => r.id);
+    await sql`delete from activity where entity = 'media' and (ref = any(${ids.map(String)}) or detail->>'name' like 'e2e-%')`;
+    await sql`delete from media where id = any(${ids})`;
+  }
+  // Test floor plans and tours
+  await sql`delete from activity where entity in ('plan', 'tour') and detail->>'name' like 'E2E %'`;
+  await sql`delete from floor_plans where type like 'E2E %'`;
+  await sql`delete from tours where title like 'E2E %'`;
 }
 
 export async function leadIdByEmail(email: string) {

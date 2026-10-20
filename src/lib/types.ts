@@ -78,6 +78,10 @@ export interface UnitType {
   rooms: Room[];
   /** id of the 360° tour for this layout, if one is published */
   tourId?: string;
+  /** Uploaded plan drawing (image, or page 1 of a PDF), shown instead of the generated plan */
+  planImage?: string;
+  /** Uploaded PDF, for "Download plan PDF" */
+  planPdf?: string;
 }
 
 export interface PaymentStage {
@@ -161,4 +165,8 @@ export interface Tour {
   /** Minimap rooms in a 200 × 140 plan space; `id` matches a scene id */
   planRooms: { id: string; x: number; y: number; w: number; h: number; label: string; outdoor?: boolean }[];
   scenes: TourScene[];
+  /** Matterport / Kuula tour shown in an iframe instead of the built-in viewer */
+  embedUrl?: string;
+  /** Card image for tours that have no panoramas (embeds) */
+  cover?: string;
 }

@@ -81,7 +81,7 @@ export const activity = pgTable(
     id: serial("id").primaryKey(),
     at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
     actor: text("actor").notNull(),
-    entity: text("entity").$type<"unit" | "project" | "auth" | "lead" | "visit">().notNull(),
+    entity: text("entity").$type<"unit" | "project" | "auth" | "lead" | "visit" | "media" | "plan" | "tour">().notNull(),
     ref: text("ref").notNull(),
     action: text("action").notNull(),
     detail: jsonb("detail").$type<Record<string, unknown>>().notNull().default({}),
@@ -191,9 +191,145 @@ export const settings = pgTable("settings", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/* ───────── Media, floor plans, 360° tours ───────── */
+
+export type MediaKind = "image" | "360" | "video" | "pdf";
+
+/** Files in Cloudinary. The database keeps what the admin needs: folder, alt text, size, who uploaded it. */
+export const media = pgTable(
+  "media",
+  {
+    id: serial("id").primaryKey(),
+    /** Cloudinary public_id, e.g. "ovdc/ocean-view-residences/tower-a-sunset_k3j2" */
+    publicId: text("public_id").notNull().unique(),
+    resourceType: text("resource_type").$type<"image" | "video" | "raw">().notNull(),
+    kind: text("kind").$type<MediaKind>().notNull(),
+    /** A project slug, or "web" for site-wide files */
+    folder: text("folder").notNull().default("web"),
+    name: text("name").notNull(),
+    format: text("format").notNull().default(""),
+    bytes: integer("bytes").notNull().default(0),
+    width: integer("width").notNull().default(0),
+    height: integer("height").notNull().default(0),
+    /** Seconds, for video */
+    duration: real("duration").notNull().default(0),
+    /** Pages, for PDF */
+    pages: integer("pages").notNull().default(0),
+    /** Original file (secure_url) */
+    url: text("url").notNull(),
+    version: integer("version").notNull().default(0),
+    alt: text("alt").notNull().default(""),
+    uploadedBy: text("uploaded_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("media_folder").on(t.folder, t.createdAt), index("media_kind").on(t.kind)],
+);
+
+export interface PlanRoom {
+  name: string;
+  /** metres */
+  w: number;
+  l: number;
+}
+
+/** One layout (unit type) per row: sizes, rooms and the uploaded plan drawing. Feeds the website's floor plans. */
+export const floorPlans = pgTable(
+  "floor_plans",
+  {
+    id: serial("id").primaryKey(),
+    projectSlug: text("project_slug")
+      .notNull()
+      .references(() => projects.slug, { onUpdate: "cascade", onDelete: "cascade" }),
+    /** Short key used in URLs and the explorer, e.g. "C" */
+    key: text("key").notNull(),
+    /** Matches units.type, e.g. "Type C" */
+    type: text("type").notNull(),
+    label: text("label").notNull().default(""),
+    sqft: integer("sqft").notNull().default(0),
+    balcony: integer("balcony").notNull().default(0),
+    facing: text("facing").notNull().default(""),
+    view: text("view").notNull().default(""),
+    rooms: jsonb("rooms").$type<PlanRoom[]>().notNull().default([]),
+    mediaId: integer("media_id").references(() => media.id, { onDelete: "set null" }),
+    sort: integer("sort").notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("floor_plans_project_type").on(t.projectSlug, t.type)],
+);
+
+export interface TourHotspotRow {
+  t: "nav" | "info";
+  yaw: number;
+  pitch: number;
+  /** nav: scene key to go to */
+  to?: string;
+  /** info */
+  id?: string;
+  kicker?: string;
+  title?: string;
+  body?: string;
+}
+
+export const tours = pgTable("tours", {
+  /** URL slug, e.g. "ovr-type-c" */
+  id: text("id").primaryKey(),
+  projectSlug: text("project_slug")
+    .notNull()
+    .references(() => projects.slug, { onUpdate: "cascade", onDelete: "cascade" }),
+  /** Unit type the tour shows, e.g. "Type C" — every unit of that type links to it */
+  type: text("type").notNull().default(""),
+  /** Unit used for the price and status shown in the tour, e.g. "A-14B" */
+  unitRef: text("unit_ref").notNull().default(""),
+  title: text("title").notNull(),
+  source: text("source").$type<"pano" | "embed">().notNull().default("pano"),
+  /** Matterport or Kuula link when source = embed */
+  embedUrl: text("embed_url").notNull().default(""),
+  coverMediaId: integer("cover_media_id").references(() => media.id, { onDelete: "set null" }),
+  bedrooms: text("bedrooms").notNull().default(""),
+  bathrooms: text("bathrooms").notNull().default(""),
+  parking: text("parking").notNull().default(""),
+  /** Minimap rooms in a 200 × 140 plan space */
+  planRooms: jsonb("plan_rooms").$type<{ id: string; x: number; y: number; w: number; h: number; label: string; outdoor?: boolean }[]>().notNull().default([]),
+  published: boolean("published").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const tourScenes = pgTable(
+  "tour_scenes",
+  {
+    id: serial("id").primaryKey(),
+    tourId: text("tour_id")
+      .notNull()
+      .references(() => tours.id, { onUpdate: "cascade", onDelete: "cascade" }),
+    /** Stable id that hotspots link to, e.g. "living" */
+    key: text("key").notNull(),
+    name: text("name").notNull(),
+    short: text("short").notNull().default(""),
+    note: text("note").notNull().default(""),
+    sort: integer("sort").notNull().default(0),
+    /** Equirectangular image URL (Cloudinary or /public) */
+    panorama: text("panorama").notNull(),
+    thumb: text("thumb").notNull().default(""),
+    mediaId: integer("media_id").references(() => media.id, { onDelete: "set null" }),
+    /** Starting view (deg) */
+    yaw: real("yaw").notNull().default(0),
+    rot: real("rot").notNull().default(0),
+    planX: real("plan_x").notNull().default(100),
+    planY: real("plan_y").notNull().default(70),
+    hotspots: jsonb("hotspots").$type<TourHotspotRow[]>().notNull().default([]),
+  },
+  (t) => [uniqueIndex("tour_scenes_key").on(t.tourId, t.key), index("tour_scenes_sort").on(t.tourId, t.sort)],
+);
+
 export type ProjectRow = typeof projects.$inferSelect;
 export type UnitRow = typeof units.$inferSelect;
 export type ActivityRow = typeof activity.$inferSelect;
 export type LeadRow = typeof leads.$inferSelect;
 export type LeadEventRow = typeof leadEvents.$inferSelect;
 export type VisitRow = typeof visits.$inferSelect;
+export type MediaRow = typeof media.$inferSelect;
+export type FloorPlanRow = typeof floorPlans.$inferSelect;
+export type TourRow = typeof tours.$inferSelect;
+export type TourSceneRow = typeof tourScenes.$inferSelect;

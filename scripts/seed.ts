@@ -8,6 +8,7 @@ import { sql } from "drizzle-orm";
 import { db, pool, schema } from "./db";
 import { projects as sampleProjects } from "../src/lib/data/projects";
 import { inventory } from "../src/lib/data/inventory";
+import { seedContent } from "./seed-content";
 
 const reset = process.argv.includes("--reset");
 
@@ -91,6 +92,8 @@ async function main() {
     });
     console.log(`Seeded ${sampleProjects.length} projects and ${unitCount} units.`);
   });
+  const c = await seedContent(db);
+  console.log(`Seeded ${c.plans} floor plans and ${c.tours} 360° tours.`);
 }
 
 main()

@@ -1,5 +1,5 @@
 import type { ProjectStatus, UnitStatus } from "@/lib/types";
-import type { LeadEventType, LeadKind, LeadStage, VisitStatus, VisitType } from "@/db/schema";
+import type { LeadEventType, LeadKind, LeadStage, MediaKind, PlanRoom, TourHotspotRow, VisitStatus, VisitType } from "@/db/schema";
 
 /** Serializable shapes passed from admin Server Components to client UI. */
 export interface AdminUnit {
@@ -63,7 +63,7 @@ export interface ActivityItem {
   id: number;
   at: string;
   actor: string;
-  entity: "unit" | "project" | "auth" | "lead" | "visit";
+  entity: "unit" | "project" | "auth" | "lead" | "visit" | "media" | "plan" | "tour";
   ref: string;
   action: string;
   detail: Record<string, unknown>;
@@ -134,6 +134,87 @@ export interface LeadDetail {
   events: LeadEvent[];
   visits: AdminVisit[];
   dupes: { id: number; name: string; source: string; createdAt: string; kind: LeadKind }[];
+}
+
+export interface MediaUse {
+  kind: "plan" | "tour" | "scene";
+  label: string;
+  href: string;
+}
+
+export interface AdminMedia {
+  id: number;
+  publicId: string;
+  resourceType: "image" | "video" | "raw";
+  kind: MediaKind;
+  folder: string;
+  name: string;
+  format: string;
+  bytes: number;
+  width: number;
+  height: number;
+  duration: number;
+  pages: number;
+  url: string;
+  alt: string;
+  uploadedBy: string;
+  createdAt: string;
+  used: MediaUse[];
+}
+
+export interface AdminPlan {
+  id: number;
+  projectSlug: string;
+  key: string;
+  type: string;
+  label: string;
+  sqft: number;
+  balcony: number;
+  facing: string;
+  view: string;
+  rooms: PlanRoom[];
+  mediaId: number | null;
+  media: Pick<AdminMedia, "id" | "url" | "kind" | "name" | "format" | "width" | "height" | "pages" | "bytes"> | null;
+  sort: number;
+  updatedAt: string;
+  /** Units of this type in the inventory, by status */
+  units: { A: number; R: number; S: number; B: number; total: number };
+  tourId: string | null;
+}
+
+export interface AdminScene {
+  key: string;
+  name: string;
+  short: string;
+  note: string;
+  panorama: string;
+  thumb: string;
+  mediaId: number | null;
+  yaw: number;
+  rot: number;
+  planX: number;
+  planY: number;
+  hotspots: TourHotspotRow[];
+}
+
+export interface AdminTour {
+  id: string;
+  projectSlug: string;
+  projectName: string;
+  type: string;
+  unitRef: string;
+  title: string;
+  source: "pano" | "embed";
+  embedUrl: string;
+  coverMediaId: number | null;
+  coverUrl: string | null;
+  bedrooms: string;
+  bathrooms: string;
+  parking: string;
+  planRooms: { id: string; x: number; y: number; w: number; h: number; label: string; outdoor?: boolean }[];
+  published: boolean;
+  updatedAt: string;
+  scenes: AdminScene[];
 }
 
 export type ActionResult<T = undefined> = { ok: true; data?: T; message?: string } | { ok: false; error: string; fields?: Record<string, string> };

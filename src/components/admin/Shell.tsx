@@ -49,9 +49,9 @@ const NAV: { label: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin/projects", label: "Projects", icon: Building2 },
       { href: "/admin/units", label: "Units", icon: LayoutGrid },
-      { label: "360° Tours", icon: Rotate3d },
-      { label: "Floor plans", icon: Map },
-      { label: "Media library", icon: ImageIcon },
+      { href: "/admin/tours", label: "360° Tours", icon: Rotate3d },
+      { href: "/admin/floor-plans", label: "Floor plans", icon: Map },
+      { href: "/admin/media", label: "Media library", icon: ImageIcon },
     ],
   },
   {

@@ -101,7 +101,12 @@ export function FloorPlans({ slug, types, initial = "C" }: { slug: string; types
           onPointerCancel={() => (drag.current = null)}
         >
           <div style={{ position: "absolute", inset: 0, transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transition: "transform 120ms linear" }}>
-            <FloorPlanSvg rooms={t.rooms} title={`${t.type} · ${t.label}`} />
+            {t.planImage ? (
+              // eslint-disable-next-line @next/next/no-img-element -- Cloudinary sizes and converts the drawing
+              <img src={t.planImage} alt={`${t.type} · ${t.label} floor plan`} style={{ width: "100%", height: "100%", objectFit: "contain", background: "#fff" }} draggable={false} />
+            ) : (
+              <FloorPlanSvg rooms={t.rooms} title={`${t.type} · ${t.label}`} />
+            )}
           </div>
           <div className={s.zoomBtns}>
             <button type="button" aria-label="Zoom in" onClick={() => setZoom((z) => Math.min(3, z + 0.5))}>
@@ -143,9 +148,15 @@ export function FloorPlans({ slug, types, initial = "C" }: { slug: string; types
             <Link className="btn btn-secondary" href={`${routes.explorer(slug)}?type=${encodeURIComponent(t.type)}`}>
               See units of this type<span aria-hidden>→</span>
             </Link>
-            <button type="button" className="btn btn-ghost" onClick={() => toast("Floor plan PDFs are being finalised — ask sales for a copy")}>
-              Download plan PDF
-            </button>
+            {t.planPdf ? (
+              <a className="btn btn-ghost" href={t.planPdf} target="_blank" rel="noreferrer">
+                Download plan PDF
+              </a>
+            ) : (
+              <button type="button" className="btn btn-ghost" onClick={() => toast("Floor plan PDFs are being finalised — ask sales for a copy")}>
+                Download plan PDF
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -1,8 +1,8 @@
-import { Building2, CalendarDays, Inbox, KeyRound, LayoutGrid } from "lucide-react";
+import { Building2, CalendarDays, Image as ImageIcon, Inbox, KeyRound, LayoutGrid, Map, Rotate3d } from "lucide-react";
 import { ago, dateTime, nowMs } from "@/lib/admin/format";
 import type { ActivityItem } from "@/lib/admin/types";
 
-const ICON = { unit: LayoutGrid, project: Building2, auth: KeyRound, lead: Inbox, visit: CalendarDays };
+const ICON = { unit: LayoutGrid, project: Building2, auth: KeyRound, lead: Inbox, visit: CalendarDays, media: ImageIcon, plan: Map, tour: Rotate3d };
 
 function describe(a: ActivityItem) {
   const name = typeof a.detail.name === "string" ? a.detail.name : null;
@@ -33,6 +33,24 @@ function describe(a: ActivityItem) {
       return (
         <>
           Visit · <strong>{name ?? a.ref}</strong> {a.action}
+        </>
+      );
+    case "media":
+      return (
+        <>
+          Media · <strong>{name ?? a.ref}</strong> {a.action}
+        </>
+      );
+    case "plan":
+      return (
+        <>
+          Floor plan · <strong>{name ?? a.ref}</strong> {a.action}
+        </>
+      );
+    case "tour":
+      return (
+        <>
+          360° tour · <strong>{name ?? a.ref}</strong> {a.action}
         </>
       );
     default:
