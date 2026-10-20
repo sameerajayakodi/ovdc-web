@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { isPhone, submitLead } from "@/lib/leads";
+import { Honeypot } from "@/components/ui/Honeypot";
 import { routes } from "@/lib/routes";
 
 /** Quick site-visit request on navy (Home). */
@@ -27,7 +28,7 @@ export function VisitForm({ projects }: { projects: { slug: string; name: string
       mobile,
       project: String(f.get("project") || ""),
       date: String(f.get("date") || ""),
-    });
+    }, f);
     setState(ok ? "done" : "error");
   }
 
@@ -84,6 +85,7 @@ export function VisitForm({ projects }: { projects: { slug: string; name: string
           <a href="tel:+94112345678">+94 11 234 5678</a>.
         </span>
       )}
+      <Honeypot />
     </form>
   );
 }

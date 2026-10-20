@@ -2,15 +2,17 @@
 
 import { useState } from "react";
 import { submitLead } from "@/lib/leads";
+import { Honeypot } from "@/components/ui/Honeypot";
 
 export function NewsletterForm() {
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const email = new FormData(e.currentTarget).get("email") as string;
+    const f = new FormData(e.currentTarget);
+    const email = f.get("email") as string;
     setState("sending");
-    const ok = await submitLead({ kind: "newsletter", email });
+    const ok = await submitLead({ kind: "newsletter", email }, f);
     setState(ok ? "done" : "error");
   }
 
@@ -44,6 +46,7 @@ export function NewsletterForm() {
           Couldn’t subscribe right now. Please try again.
         </span>
       )}
+      <Honeypot />
     </form>
   );
 }

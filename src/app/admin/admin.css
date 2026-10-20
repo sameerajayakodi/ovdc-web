@@ -261,6 +261,37 @@ textarea.ad-input { min-height: 96px; resize: vertical; line-height: 1.5; }
 .ad-st-S { background: var(--a-sold); color: var(--a-sold-ink); }
 .ad-st-B { background-color: var(--a-blocked-bg); background-image: var(--a-hatch); color: var(--a-blocked-ink); }
 
+/* Lead pipeline stages (tag + column bar) */
+.ad-stage { border: 1px solid transparent; }
+[data-stage="new"] { --stage-bg: var(--a-accent); --stage-fg: #0f1b2d; --stage-bd: var(--a-accent); --stage-bar: var(--a-accent); }
+[data-stage="contacted"] { --stage-bg: var(--a-n200); --stage-fg: var(--a-text); --stage-bd: var(--a-n200); --stage-bar: color-mix(in srgb, var(--a-text) 40%, transparent); }
+[data-stage="visit"] { --stage-bg: var(--a-accent-100); --stage-fg: var(--a-gold-text); --stage-bd: var(--a-accent-300); --stage-bar: var(--a-accent-300); }
+[data-stage="negotiation"] { --stage-bg: transparent; --stage-fg: var(--a-gold-text); --stage-bd: var(--a-accent); --stage-bar: var(--a-accent-600); }
+[data-stage="reserved"] { --stage-bg: var(--a-warn-bg); --stage-fg: var(--a-warn-text); --stage-bd: var(--a-reserved); --stage-bar: var(--a-reserved); }
+[data-stage="won"] { --stage-bg: var(--a-ok-bg); --stage-fg: var(--a-ok-text); --stage-bd: var(--a-available); --stage-bar: var(--a-available); }
+[data-stage="lost"] { --stage-bg: transparent; --stage-fg: var(--a-muted); --stage-bd: var(--a-divider); --stage-bar: var(--a-divider); }
+.ad-stage[data-stage] { background: var(--stage-bg); color: var(--stage-fg); border-color: var(--stage-bd); }
+
+/* Site visit statuses */
+[data-visit="confirmed"] { --vs-bg: var(--a-text); --vs-fg: var(--a-bg); --vs-bd: var(--a-text); }
+[data-visit="pending"] { --vs-bg: var(--a-bg); --vs-fg: var(--a-gold-text); --vs-bd: var(--a-accent); }
+[data-visit="completed"] { --vs-bg: var(--a-ok-bg); --vs-fg: var(--a-ok-text); --vs-bd: var(--a-available); }
+[data-visit="no-show"] { --vs-bg: var(--a-danger-bg); --vs-fg: var(--a-danger-text); --vs-bd: var(--a-danger); }
+[data-visit="rescheduled"] { --vs-bg: var(--a-n100); --vs-fg: var(--a-text); --vs-bd: color-mix(in srgb, var(--a-text) 40%, transparent); }
+[data-visit="cancelled"] { --vs-bg: transparent; --vs-fg: var(--a-muted); --vs-bd: var(--a-divider); }
+.ad-vs[data-visit] { background: var(--vs-bg); color: var(--vs-fg); border: 1.5px solid var(--vs-bd); }
+.ad-vs[data-visit="cancelled"] { text-decoration: line-through; }
+
+/* Side drawer (lead details) */
+.ad-drawer-scrim { position: fixed; inset: 0; background: rgba(15, 27, 45, 0.35); z-index: 60; animation: adFade 0.15s ease-out; }
+.ad-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; width: min(640px, 100vw); z-index: 61;
+  background: var(--a-bg); border-left: 2px solid var(--a-divider); box-shadow: var(--a-shadow-lg);
+  display: flex; flex-direction: column; animation: adSlideIn 0.2s ease-out;
+}
+@keyframes adSlideIn { from { transform: translateX(24px); opacity: 0; } }
+.ad-dialog-wide { width: min(640px, 100%); max-height: calc(100svh - 48px); overflow: auto; }
+
 /* — surfaces — */
 .ad-section { background: var(--a-surface); min-width: 0; display: flex; flex-direction: column; }
 .ad-section-head { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 2px solid var(--a-divider); min-height: 50px; }
@@ -270,10 +301,15 @@ textarea.ad-input { min-height: 96px; resize: vertical; line-height: 1.5; }
 .ad-row:last-child { border-bottom: 0; }
 
 .ad-kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 2px; background: var(--a-divider); border: 2px solid var(--a-divider); }
-/* Dashboard row: five tiles, the units tile spans two columns. */
-.ad-kpis-dash { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-auto-flow: dense; }
+/* Dashboard row: six tiles, the units tile spans two columns. */
+.ad-kpis-dash { grid-template-columns: repeat(7, minmax(0, 1fr)); grid-auto-flow: dense; }
 .ad-kpis-dash > .wide { grid-column: span 2; }
-@media (max-width: 1360px) { .ad-kpis-dash { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+/* Narrower: the leads tile widens too, so the eight cells fill 4- and 2-column rows. */
+@media (max-width: 1500px) {
+  .ad-kpis-dash { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .ad-kpis-dash > .wide-md { grid-column: span 2; }
+}
+@media (max-width: 960px) { .ad-kpis-dash { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 640px) { .ad-kpis-dash { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .ad-stack { display: flex; flex-direction: column; gap: 20px; }
 .ad-kpi { background: var(--a-bg); padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; min-width: 0; color: inherit; text-decoration: none; }

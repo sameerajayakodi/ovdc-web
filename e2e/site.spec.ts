@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { testEmail, testIp } from "./testdb";
 
 /** Fail a test on any uncaught page error or console error. */
 function watchErrors(page: Page) {
@@ -132,13 +133,15 @@ test.describe("project detail", () => {
   });
 
   test("brochure form validates, then submits a lead", async ({ page }) => {
+    // Leads are stored: use a test identity (removed after the run) and a test client IP (own throttle bucket).
+    await page.setExtraHTTPHeaders({ "x-real-ip": testIp() });
     await page.goto("/projects/ocean-view-residences");
     const form = page.locator('[data-sec="brochure"]');
     await form.getByRole("button", { name: /Get the brochure/ }).click();
     await expect(form.getByText("Please enter your name")).toBeVisible();
-    await form.getByLabel("Full name").fill("Test Buyer");
+    await form.getByLabel("Full name").fill("E2E Test Buyer");
     await form.getByLabel("Mobile").fill("+94 77 123 4567");
-    await form.getByLabel("Email").fill("buyer@example.com");
+    await form.getByLabel("Email").fill(testEmail("buyer"));
     const lead = page.waitForResponse((r) => r.url().endsWith("/api/leads") && r.request().method() === "POST");
     await form.getByRole("button", { name: /Get the brochure/ }).click();
     expect((await lead).status()).toBe(201);
@@ -202,6 +205,10 @@ test.describe("shortlist & compare", () => {
 });
 
 test.describe("lead flows", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.setExtraHTTPHeaders({ "x-real-ip": testIp() });
+  });
+
   test("book a site visit end to end", async ({ page }) => {
     await page.goto("/book-a-visit?project=ocean-view-residences&unit=A-14B");
     await expect(page.getByText("unit A-14B", { exact: false })).toBeVisible();
@@ -212,7 +219,7 @@ test.describe("lead flows", () => {
     await page.getByRole("radio").filter({ hasNot: page.locator("[disabled]") }).first().click();
     await page.getByRole("radio", { name: "11.00 am" }).click();
     await page.getByRole("button", { name: "Continue" }).click();
-    await page.getByLabel("Full name").fill("Nadeesha Perera");
+    await page.getByLabel("Full name").fill("E2E Nadeesha Perera");
     await page.getByLabel("Mobile / WhatsApp").fill("+61 412 345 678");
     await page.getByLabel(/OVDC may contact me/).check();
     const lead = page.waitForResponse((r) => r.url().endsWith("/api/leads"));
@@ -224,18 +231,19 @@ test.describe("lead flows", () => {
 
   test("contact form", async ({ page }) => {
     await page.goto("/contact");
-    await page.getByLabel("Full name").fill("Test");
-    await page.getByLabel("Email").fill("test@example.com");
+    await page.getByLabel("Full name").fill("E2E Test");
+    await page.getByLabel("Email").fill(testEmail("contact"));
     await page.getByLabel("Message").fill("Please send the price list for Type C.");
     await page.getByRole("button", { name: /Send message/ }).click();
-    await expect(page.getByRole("heading", { name: /Thank you, Test/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Thank you, E2E/ })).toBeVisible();
   });
 
   test("lead API rejects bad input", async ({ request }) => {
-    expect((await request.post("/api/leads", { data: { kind: "nope" } })).status()).toBe(400);
-    expect((await request.post("/api/leads", { data: { kind: "enquiry", name: "x" } })).status()).toBe(422);
-    expect((await request.post("/api/leads", { data: { kind: "newsletter", email: "bad" } })).status()).toBe(422);
-    expect((await request.post("/api/leads", { data: { kind: "newsletter", email: "a@b.lk" } })).status()).toBe(201);
+    const headers = { "x-real-ip": testIp() };
+    expect((await request.post("/api/leads", { headers, data: { kind: "nope" } })).status()).toBe(400);
+    expect((await request.post("/api/leads", { headers, data: { kind: "enquiry", name: "x" } })).status()).toBe(422);
+    expect((await request.post("/api/leads", { headers, data: { kind: "newsletter", email: "bad" } })).status()).toBe(422);
+    expect((await request.post("/api/leads", { headers, data: { kind: "newsletter", email: testEmail("news") } })).status()).toBe(201);
   });
 });
 

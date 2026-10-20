@@ -1,6 +1,11 @@
 /** Every form on the site (enquiry, brochure, site visit, newsletter, contact) posts here. */
 
-export type LeadKind = "enquiry" | "brochure" | "site-visit" | "newsletter" | "contact" | "reservation" | "application" | "portal-access";
+import type { LeadKind } from "@/db/schema";
+
+export type { LeadKind };
+
+/** Name of the hidden honeypot field rendered by <Honeypot /> in every lead form. */
+export const HONEYPOT = "website";
 
 export interface LeadInput {
   kind: LeadKind;
@@ -18,12 +23,17 @@ export interface LeadInput {
   url?: string;
 }
 
-export async function submitLead(lead: LeadInput): Promise<boolean> {
+/** Posts a form to /api/leads. Pass the form's FormData so the honeypot travels with it. */
+export async function submitLead(lead: LeadInput, form?: FormData): Promise<boolean> {
   try {
     const res = await fetch("/api/leads", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...lead, page: typeof location !== "undefined" ? location.pathname : undefined }),
+      body: JSON.stringify({
+        ...lead,
+        [HONEYPOT]: form?.get(HONEYPOT) ?? undefined,
+        page: typeof location !== "undefined" ? location.pathname : undefined,
+      }),
     });
     return res.ok;
   } catch {

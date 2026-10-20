@@ -8,6 +8,9 @@ const PORT = 3100;
  */
 export default defineConfig({
   testDir: "./e2e",
+  // Lead tests write to the shared Neon database; these remove every row they create.
+  globalSetup: "./e2e/global-cleanup.ts",
+  globalTeardown: "./e2e/global-cleanup.ts",
   timeout: 60_000,
   expect: { timeout: 10_000 },
   fullyParallel: true,

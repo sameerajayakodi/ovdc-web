@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { isPhone, submitLead, type LeadKind } from "@/lib/leads";
+import { Honeypot } from "@/components/ui/Honeypot";
 import { IconCheck } from "@/components/ui/Icons";
 import c from "./content.module.css";
 
@@ -39,7 +40,7 @@ export function SimpleLeadForm({
     setErr(x);
     if (Object.keys(x).length) return;
     setState("sending");
-    const ok = await submitLead({ kind, ...context, ...v });
+    const ok = await submitLead({ kind, ...context, ...v }, f);
     setState(ok ? "done" : "error");
   }
 
@@ -87,6 +88,7 @@ export function SimpleLeadForm({
           Something went wrong. Please try again.
         </span>
       )}
+      <Honeypot />
     </form>
   );
 }

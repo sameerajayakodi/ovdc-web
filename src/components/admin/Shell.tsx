@@ -57,8 +57,8 @@ const NAV: { label: string; items: NavItem[] }[] = [
   {
     label: "Sales & CRM",
     items: [
-      { label: "Leads", icon: Inbox },
-      { label: "Site visits", icon: CalendarDays },
+      { href: "/admin/leads", label: "Leads", icon: Inbox },
+      { href: "/admin/visits", label: "Site visits", icon: CalendarDays },
       { label: "Reservations & sales", icon: FileSignature },
       { label: "Customers", icon: Users },
     ],

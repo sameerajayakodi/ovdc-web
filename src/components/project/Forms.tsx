@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { isPhone, submitLead } from "@/lib/leads";
+import { Honeypot } from "@/components/ui/Honeypot";
 import { routes } from "@/lib/routes";
 import { company } from "@/lib/data/content";
 import { IconCheck, IconWhatsApp } from "@/components/ui/Icons";
@@ -54,7 +55,7 @@ export function EnquiryCard({
       name: String(f.get("name")),
       mobile: String(f.get("mobile")),
       interest: String(f.get("interest") || ""),
-    });
+    }, f);
     setState(ok ? "done" : "error");
   }
 
@@ -125,6 +126,7 @@ export function EnquiryCard({
         <span className="subtle" style={{ fontSize: 12 }}>
           Sales gallery open today, 9.00 am – 6.00 pm
         </span>
+        <Honeypot />
       </form>
     </div>
   );
@@ -147,7 +149,7 @@ export function BrochureForm({ project, pages = 40, size = "18 MB" }: { project:
       name: String(f.get("name")),
       mobile: String(f.get("mobile")),
       email: String(f.get("email")),
-    });
+    }, f);
     setState(ok ? "done" : "error");
   }
 
@@ -198,6 +200,7 @@ export function BrochureForm({ project, pages = 40, size = "18 MB" }: { project:
               Couldn’t send — please try again.
             </span>
           )}
+          <Honeypot />
         </form>
       )}
     </section>

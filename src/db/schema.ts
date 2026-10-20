@@ -81,7 +81,7 @@ export const activity = pgTable(
     id: serial("id").primaryKey(),
     at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
     actor: text("actor").notNull(),
-    entity: text("entity").$type<"unit" | "project" | "auth">().notNull(),
+    entity: text("entity").$type<"unit" | "project" | "auth" | "lead" | "visit">().notNull(),
     ref: text("ref").notNull(),
     action: text("action").notNull(),
     detail: jsonb("detail").$type<Record<string, unknown>>().notNull().default({}),
@@ -89,6 +89,111 @@ export const activity = pgTable(
   (t) => [index("activity_at").on(t.at)],
 );
 
+/* ───────── Sales & CRM ───────── */
+
+export type LeadKind = "enquiry" | "brochure" | "site-visit" | "newsletter" | "contact" | "reservation" | "application" | "portal-access";
+/** new → contacted → visit (site visit booked) → negotiation → reserved → won, or lost at any point */
+export type LeadStage = "new" | "contacted" | "visit" | "negotiation" | "reserved" | "won" | "lost";
+export type LeadEventType = "created" | "note" | "stage" | "assign" | "call" | "whatsapp" | "email" | "visit" | "follow-up" | "edit" | "merge";
+export type VisitStatus = "pending" | "confirmed" | "completed" | "no-show" | "rescheduled" | "cancelled";
+export type VisitType = "site" | "gallery" | "video";
+
+/** Every website form submission, plus leads staff add by hand. */
+export const leads = pgTable(
+  "leads",
+  {
+    id: serial("id").primaryKey(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    kind: text("kind").$type<LeadKind>().notNull(),
+    /** "Website" for form posts; Walk-in, Referral… for leads added in the console */
+    source: text("source").notNull().default("Website"),
+    stage: text("stage").$type<LeadStage>().notNull().default("new"),
+    name: text("name").notNull().default(""),
+    mobile: text("mobile").notNull().default(""),
+    /** Last 9 digits of the mobile, used to spot duplicates */
+    phoneKey: text("phone_key").notNull().default(""),
+    email: text("email").notNull().default(""),
+    project: text("project").notNull().default(""),
+    unit: text("unit").notNull().default(""),
+    interest: text("interest").notNull().default(""),
+    budget: text("budget").notNull().default(""),
+    message: text("message").notNull().default(""),
+    url: text("url").notNull().default(""),
+    /** Website path the form was sent from */
+    page: text("page").notNull().default(""),
+    /** Visit request as sent by the website form (the booked visit itself lives in `visits`) */
+    visitDate: text("visit_date").notNull().default(""),
+    visitSlot: text("visit_slot").notNull().default(""),
+    visitType: text("visit_type").notNull().default(""),
+    agent: text("agent").notNull().default(""),
+    followUpAt: timestamp("follow_up_at", { withTimezone: true }),
+    /** First time the lead left the "new" stage, for response-time stats */
+    respondedAt: timestamp("responded_at", { withTimezone: true }),
+    lostReason: text("lost_reason").notNull().default(""),
+    /** Salted SHA-256 of the sender's IP, for throttling. Never the raw address. */
+    ipHash: text("ip_hash").notNull().default(""),
+  },
+  (t) => [
+    index("leads_created").on(t.createdAt),
+    index("leads_stage").on(t.stage),
+    index("leads_phone_key").on(t.phoneKey),
+    index("leads_ip_created").on(t.ipHash, t.createdAt),
+  ],
+);
+
+/** A lead's timeline: notes, calls, stage changes, visits. */
+export const leadEvents = pgTable(
+  "lead_events",
+  {
+    id: serial("id").primaryKey(),
+    leadId: integer("lead_id")
+      .notNull()
+      .references(() => leads.id, { onDelete: "cascade" }),
+    at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+    actor: text("actor").notNull(),
+    type: text("type").$type<LeadEventType>().notNull(),
+    text: text("text").notNull().default(""),
+    detail: jsonb("detail").$type<Record<string, unknown>>().notNull().default({}),
+  },
+  (t) => [index("lead_events_lead").on(t.leadId, t.at)],
+);
+
+export const visits = pgTable(
+  "visits",
+  {
+    id: serial("id").primaryKey(),
+    leadId: integer("lead_id")
+      .notNull()
+      .references(() => leads.id, { onDelete: "cascade" }),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    durationMin: integer("duration_min").notNull().default(60),
+    type: text("type").$type<VisitType>().notNull().default("site"),
+    /** Show apartment, sales gallery or "Video call" */
+    location: text("location").notNull(),
+    project: text("project").notNull().default(""),
+    party: integer("party").notNull().default(2),
+    agent: text("agent").notNull().default(""),
+    status: text("status").$type<VisitStatus>().notNull().default("pending"),
+    note: text("note").notNull().default(""),
+    /** "website" or the admin who booked it */
+    bookedBy: text("booked_by").notNull().default("website"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("visits_starts").on(t.startsAt), index("visits_lead").on(t.leadId)],
+);
+
+/** Small console settings, e.g. visit slot capacity per location. */
+export const settings = pgTable("settings", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").$type<unknown>().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type ProjectRow = typeof projects.$inferSelect;
 export type UnitRow = typeof units.$inferSelect;
 export type ActivityRow = typeof activity.$inferSelect;
+export type LeadRow = typeof leads.$inferSelect;
+export type LeadEventRow = typeof leadEvents.$inferSelect;
+export type VisitRow = typeof visits.$inferSelect;

@@ -1,8 +1,8 @@
-import { Building2, KeyRound, LayoutGrid } from "lucide-react";
+import { Building2, CalendarDays, Inbox, KeyRound, LayoutGrid } from "lucide-react";
 import { ago, dateTime, nowMs } from "@/lib/admin/format";
 import type { ActivityItem } from "@/lib/admin/types";
 
-const ICON = { unit: LayoutGrid, project: Building2, auth: KeyRound };
+const ICON = { unit: LayoutGrid, project: Building2, auth: KeyRound, lead: Inbox, visit: CalendarDays };
 
 function describe(a: ActivityItem) {
   const name = typeof a.detail.name === "string" ? a.detail.name : null;
@@ -21,6 +21,18 @@ function describe(a: ActivityItem) {
           {Array.isArray(a.detail.fields) && a.action === "updated" ? (
             <span className="ad-muted"> · {(a.detail.fields as string[]).slice(0, 4).join(", ")}</span>
           ) : null}
+        </>
+      );
+    case "lead":
+      return (
+        <>
+          <strong>{a.ref.includes("leads") ? a.ref : name || `Lead #${a.ref}`}</strong> · {a.action}
+        </>
+      );
+    case "visit":
+      return (
+        <>
+          Visit · <strong>{name ?? a.ref}</strong> {a.action}
         </>
       );
     default:

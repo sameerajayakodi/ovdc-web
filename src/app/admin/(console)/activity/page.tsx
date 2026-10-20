@@ -13,6 +13,8 @@ const FILTERS: [string, string][] = [
   ["all", "All"],
   ["unit", "Units"],
   ["project", "Projects"],
+  ["lead", "Leads"],
+  ["visit", "Visits"],
   ["auth", "Sign-ins"],
 ];
 
@@ -28,7 +30,7 @@ async function Activity({ searchParams }: Pick<PageProps<"/admin/activity">, "se
   await requireAdmin();
   if (!hasDb()) return <DbMissing />;
   const { type } = await searchParams;
-  const entity = (["unit", "project", "auth"] as const).find((e) => e === type);
+  const entity = (["unit", "project", "lead", "visit", "auth"] as const).find((e) => e === type);
   const items: ActivityItem[] = await getActivity(200, entity);
 
   return (
@@ -36,7 +38,7 @@ async function Activity({ searchParams }: Pick<PageProps<"/admin/activity">, "se
       <div className="ad-page-head">
         <div>
           <h1>Activity log</h1>
-          <div className="ad-sub">Every change to units and projects, and every sign-in · latest 200</div>
+          <div className="ad-sub">Every change to units, projects, leads and visits, and every sign-in · latest 200</div>
         </div>
         <nav className="ad-seg" aria-label="Filter activity">
           {FILTERS.map(([k, l]) => (

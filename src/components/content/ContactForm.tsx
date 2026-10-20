@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { isPhone, submitLead } from "@/lib/leads";
+import { Honeypot } from "@/components/ui/Honeypot";
 import { routes } from "@/lib/routes";
 import { IconCheck } from "@/components/ui/Icons";
 import c from "./content.module.css";
@@ -31,7 +32,7 @@ export function ContactForm({ projects }: { projects: string[] }) {
     if (Object.keys(x).length) return;
     setName(v.name);
     setState("sending");
-    const ok = await submitLead({ kind: "contact", ...v, interest: String(f.get("topic")), project: String(f.get("project") || "") });
+    const ok = await submitLead({ kind: "contact", ...v, interest: String(f.get("topic")), project: String(f.get("project") || "") }, f);
     setState(ok ? "done" : "error");
   }
 
@@ -99,6 +100,7 @@ export function ContactForm({ projects }: { projects: string[] }) {
           We couldn’t send your message. Please try again, or call us.
         </span>
       )}
+      <Honeypot />
     </form>
   );
 }

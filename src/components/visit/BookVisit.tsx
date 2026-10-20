@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { isPhone, submitLead } from "@/lib/leads";
+import { Honeypot } from "@/components/ui/Honeypot";
 import { routes } from "@/lib/routes";
 import { company } from "@/lib/data/content";
 import { photos, projectPhoto } from "@/lib/data/media";
@@ -107,7 +108,7 @@ export function BookVisit({ projects }: { projects: P[] }) {
       slot,
       visitType: visit,
       message: String(f.get("message") || ""),
-    });
+    }, f);
     setSending(false);
     if (ok) setStep(3);
     else setFailed(true);
@@ -265,6 +266,7 @@ export function BookVisit({ projects }: { projects: P[] }) {
                   We couldn’t send your request. Please try again or call {company.hotline}.
                 </span>
               )}
+              <Honeypot />
             </form>
           )}
 

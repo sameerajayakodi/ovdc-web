@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { ArrowRight, Building2, CircleDollarSign, Gauge, LayoutGrid, Ruler } from "lucide-react";
+import { ArrowRight, Building2, CircleDollarSign, Gauge, Inbox, LayoutGrid, Ruler } from "lucide-react";
 import { requireAdmin } from "@/lib/admin/auth";
 import { getDashboard, hasDb } from "@/lib/admin/queries";
+import { getCrmStats } from "@/lib/admin/crmQueries";
 import { STAGE_LABEL, TZ, lkr } from "@/lib/admin/format";
 import { ActivityFeed } from "@/components/admin/ActivityFeed";
 import { DbMissing, PageSkeleton } from "@/components/admin/States";
@@ -34,7 +35,7 @@ function greeting(now: Date) {
 async function Dashboard() {
   const admin = await requireAdmin();
   if (!hasDb()) return <DbMissing />;
-  const { projects, units, activity } = await getDashboard();
+  const [{ projects, units, activity }, crm] = await Promise.all([getDashboard(), getCrmStats()]);
   const now = new Date();
 
   const count = { A: 0, R: 0, S: 0, B: 0 } as Record<UnitStatus, number>;
@@ -146,6 +147,17 @@ async function Dashboard() {
           </div>
           <div className="ad-kpi-sub">{released ? `${Math.round(((count.S + count.R) / released) * 100)}% of released stock` : "—"}</div>
         </div>
+        <Link href="/admin/leads?stage=new" className="ad-kpi wide-md">
+          <div className="ad-kpi-label">
+            <Inbox size={14} />
+            New leads
+          </div>
+          <div className="ad-kpi-value">{crm.newLeads}</div>
+          <div className="ad-kpi-sub">
+            {crm.weekLeads} this week · {crm.visitsToday} visit{crm.visitsToday === 1 ? "" : "s"} today
+            {crm.overdue ? <span style={{ color: "var(--a-danger-text)" }}> · {crm.overdue} overdue</span> : null}
+          </div>
+        </Link>
         <div className="ad-kpi">
           <div className="ad-kpi-label">
             <Ruler size={14} />
