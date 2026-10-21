@@ -16,11 +16,12 @@ export type TypeRow = UnitType & { from: number | null; available: number; total
 /** Unit-type table + zoomable floor plan for the selected layout. */
 export function FloorPlans({ slug, types, initial = "C" }: { slug: string; types: TypeRow[]; initial?: string }) {
   const { currency, toast } = usePrefs();
-  const [sel, setSel] = useState(types.find((t) => t.key === initial) ? initial : types[0]?.key);
+  // The type is unique within a project; the short code is only a default.
+  const [sel, setSel] = useState((types.find((t) => t.key === initial) ?? types[0])?.type);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const drag = useRef<{ x: number; y: number } | null>(null);
-  const t = types.find((x) => x.key === sel) ?? types[0];
+  const t = types.find((x) => x.type === sel) ?? types[0];
   if (!t) return null;
 
   const reset = () => {
@@ -44,14 +45,14 @@ export function FloorPlans({ slug, types, initial = "C" }: { slug: string; types
           </thead>
           <tbody>
             {types.map((row) => (
-              <tr key={row.key} style={{ background: row.key === sel ? "var(--color-surface)" : undefined }}>
+              <tr key={row.type} style={{ background: row.type === sel ? "var(--color-surface)" : undefined }}>
                 <td style={{ padding: 0 }}>
                   <button
                     type="button"
                     className={s.typeBtn}
-                    aria-pressed={row.key === sel}
+                    aria-pressed={row.type === sel}
                     onClick={() => {
-                      setSel(row.key);
+                      setSel(row.type);
                       reset();
                     }}
                   >
@@ -61,12 +62,12 @@ export function FloorPlans({ slug, types, initial = "C" }: { slug: string; types
                 <td>{row.label}</td>
                 <td className="num">{row.sqft.toLocaleString("en-US")} sqft</td>
                 <td className="num" style={{ fontWeight: 600 }}>
-                  {row.from ? money(row.from, currency) : "Sold out"}
+                  {row.from ? money(row.from, currency) : row.total ? "Sold out" : "—"}
                 </td>
                 <td>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                     <StatusSwatch status={row.k} size={22} />
-                    {row.available} of {row.total} available
+                    {row.total ? `${row.available} of ${row.total} available` : "Release coming soon"}
                   </span>
                 </td>
                 <td className="num">
@@ -134,20 +135,22 @@ export function FloorPlans({ slug, types, initial = "C" }: { slug: string; types
             {t.type} · {t.label}
           </span>
           <span className="muted" style={{ fontSize: 15 }}>
-            {t.sqft.toLocaleString("en-US")} sqft interior · {t.balcony} sqft balcony · {t.facing}-facing · {t.view} view
+            {[`${t.sqft.toLocaleString("en-US")} sqft interior`, t.balcony ? `${t.balcony} sqft balcony` : "", t.facing ? `${t.facing}-facing` : "", t.view ? `${t.view} view` : ""].filter(Boolean).join(" · ")}
           </span>
           <div style={{ display: "flex", flexDirection: "column", borderTop: "1px solid var(--color-divider)" }}>
-            {t.rooms.map((r) => (
-              <div key={r.name} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid var(--color-divider)", fontSize: 14 }}>
+            {t.rooms.map((r, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid var(--color-divider)", fontSize: 14 }}>
                 <span>{r.name}</span>
                 <span className="nums muted">{r.dim}</span>
               </div>
             ))}
           </div>
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-            <Link className="btn btn-secondary" href={`${routes.explorer(slug)}?type=${encodeURIComponent(t.type)}`}>
-              See units of this type<span aria-hidden>→</span>
-            </Link>
+            {t.total > 0 && (
+              <Link className="btn btn-secondary" href={`${routes.explorer(slug)}?type=${encodeURIComponent(t.type)}`}>
+                See units of this type<span aria-hidden>→</span>
+              </Link>
+            )}
             {t.planPdf ? (
               <a className="btn btn-ghost" href={t.planPdf} target="_blank" rel="noreferrer">
                 Download plan PDF

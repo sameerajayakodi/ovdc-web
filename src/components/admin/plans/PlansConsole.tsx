@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CircleAlert, ImageOff, Map as MapIcon, Plus, Rotate3d, Trash2, TriangleAlert, Upload, X } from "lucide-react";
+import { ArrowDown, ArrowUp, CircleAlert, ImageOff, Map as MapIcon, Plus, Rotate3d, Trash2, TriangleAlert, Upload, X } from "lucide-react";
 import Link from "next/link";
-import { deletePlan, savePlan, setPlanFile, type PlanInput } from "@/app/admin/plan-actions";
+import { deletePlan, movePlan, savePlan, setPlanFile, type PlanInput } from "@/app/admin/plan-actions";
 import type { PlanRoom } from "@/db/schema";
 import { useAdminUi } from "../AdminRoot";
 import { uploadFile } from "../media/upload";
@@ -25,10 +25,16 @@ interface Props {
 const SQFT_PER_M2 = 10.7639;
 const M_TO_FT = 3.28084;
 
-type Draft = PlanInput & { id: number | null };
+/** Rooms carry a client-only key so their inputs stay with them when a room above is removed. */
+type DraftRoom = PlanRoom & { k: number };
+type Draft = Omit<PlanInput, "rooms"> & { id: number | null; rooms: DraftRoom[] };
 
-const blank = (slug: string): Draft => ({ id: null, projectSlug: slug, type: "", key: "", label: "", sqft: 0, balcony: 0, facing: "", view: "", rooms: [{ name: "Living & dining", w: 0, l: 0 }] });
-const toDraft = (p: AdminPlan): Draft => ({ id: p.id, projectSlug: p.projectSlug, type: p.type, key: p.key, label: p.label, sqft: p.sqft, balcony: p.balcony, facing: p.facing, view: p.view, rooms: p.rooms.map((r) => ({ name: r.name, w: r.w, l: r.l })) }); // jsonb reorders keys; rebuild in a fixed order
+let nextKey = 0;
+const room = (r: PlanRoom): DraftRoom => ({ name: r.name, w: r.w, l: r.l, k: nextKey++ });
+const blank = (slug: string): Draft => ({ id: null, projectSlug: slug, type: "", key: "", label: "", sqft: 0, balcony: 0, facing: "", view: "", rooms: [room({ name: "Living & dining", w: 0, l: 0 })] });
+const toDraft = (p: AdminPlan): Draft => ({ id: p.id, projectSlug: p.projectSlug, type: p.type, key: p.key, label: p.label, sqft: p.sqft, balcony: p.balcony, facing: p.facing, view: p.view, rooms: p.rooms.map(room) });
+/** What is saved and compared: rooms in a fixed key order (jsonb reorders keys) and without the client keys. */
+const toInput = (d: Draft): PlanInput => ({ projectSlug: d.projectSlug, type: d.type, key: d.key, label: d.label, sqft: d.sqft, balcony: d.balcony, facing: d.facing, view: d.view, rooms: d.rooms.map((r) => ({ name: r.name, w: r.w, l: r.l })) });
 
 export function PlansConsole({ projects, slug, plans, inventoryTypes, initialId, uploads }: Props) {
   const router = useRouter();
@@ -42,23 +48,43 @@ export function PlansConsole({ projects, slug, plans, inventoryTypes, initialId,
   const [progress, setProgress] = useState<number | null>(null);
   const project = projects.find((p) => p.slug === slug)!;
 
-  const original = cur ? toDraft(cur) : blank(slug);
-  const dirty = JSON.stringify(draft) !== JSON.stringify(original);
+  const original = useMemo(() => JSON.stringify(toInput(cur ? toDraft(cur) : blank(slug))), [cur, slug]);
+  const dirty = JSON.stringify(toInput(draft)) !== original;
   const missing = inventoryTypes.filter((t) => !plans.some((p) => p.type === t));
+  const index = cur ? plans.findIndex((p) => p.id === cur.id) : -1;
 
-  function pick(id: number | "new") {
-    if (dirty && !window.confirm("Discard unsaved changes to this layout?")) return;
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+
+  const discardOk = async () => !dirty || confirm({ title: "Discard unsaved changes?", body: `Your edits to ${draft.type || "this layout"} have not been saved.`, confirmLabel: "Discard", danger: true });
+
+  async function pick(id: number | "new", type = "") {
+    if (!(await discardOk())) return;
     const p = id === "new" ? null : plans.find((x) => x.id === id);
     setCurId(id);
-    setDraft(p ? toDraft(p) : blank(slug));
+    setDraft(p ? toDraft(p) : { ...blank(slug), type });
     setErr({});
     const qs = new URLSearchParams({ project: slug });
     if (p) qs.set("type", p.type);
     window.history.replaceState(null, "", `?${qs}`);
   }
 
-  const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft((d) => ({ ...d, [k]: v }));
-  const setRoom = (i: number, patch: Partial<PlanRoom>) => setDraft((d) => ({ ...d, rooms: d.rooms.map((r, j) => (j === i ? { ...r, ...patch } : r)) }));
+  // Editing a field clears its error from the last save.
+  const clearErr = (k: string) => {
+    if (err[k]) setErr((e) => Object.fromEntries(Object.entries(e).filter(([x]) => x !== k)));
+  };
+  const set = <K extends keyof Draft>(k: K, v: Draft[K]) => {
+    setDraft((d) => ({ ...d, [k]: v }));
+    clearErr(k);
+  };
+  const setRoom = (i: number, patch: Partial<PlanRoom>) => {
+    setDraft((d) => ({ ...d, rooms: d.rooms.map((r, j) => (j === i ? { ...r, ...patch } : r)) }));
+    clearErr(`room${i}`);
+  };
 
   // Inputs show metres or feet; the database always keeps metres.
   const show = (m: number) => (m ? String(unit === "m" ? m : Math.round(m * M_TO_FT * 10) / 10) : "");
@@ -70,10 +96,15 @@ export function PlansConsole({ projects, slug, plans, inventoryTypes, initialId,
   const roomsM2 = draft.rooms.reduce((n, r) => n + area(r), 0);
   const areaLabel = (m2: number) => (unit === "m" ? `${m2.toFixed(1)} m²` : `${Math.round(m2 * SQFT_PER_M2).toLocaleString("en-US")} sqft`);
 
-  function save() {
+  async function save() {
+    if (cur && draft.type.trim() !== cur.type && (cur.units.total || cur.tourId)) {
+      const linked = [cur.units.total ? `${cur.units.total} units` : "", cur.tourId ? "the 360° tour" : ""].filter(Boolean).join(" and ");
+      const ok = await confirm({ title: `Rename ${cur.type} to ${draft.type.trim() || "…"}?`, body: `${linked} use ${cur.type}. They are renamed with the layout, so they keep their floor plan on the website.`, confirmLabel: "Rename" });
+      if (!ok) return;
+    }
     start(async () => {
       try {
-        const r = await savePlan(draft.id, draft);
+        const r = await savePlan(draft.id, toInput(draft));
         if (!r.ok) {
           setErr(r.fields ?? {});
           return toast(r.error, "err");
@@ -103,6 +134,14 @@ export function PlansConsole({ projects, slug, plans, inventoryTypes, initialId,
     });
   }
 
+  function move(dir: -1 | 1) {
+    if (!cur) return;
+    start(async () => {
+      const r = await movePlan(cur.id, dir);
+      if (!r.ok) toast(r.error, "err");
+    });
+  }
+
   async function removeFile() {
     if (!cur?.media) return;
     if (!(await confirm({ title: "Remove the drawing?", body: "The website shows the plan generated from the room sizes instead. The file stays in the Media library.", confirmLabel: "Remove" }))) return;
@@ -117,7 +156,7 @@ export function PlansConsole({ projects, slug, plans, inventoryTypes, initialId,
     const ok = await confirm({
       danger: true,
       title: `Delete ${cur.type}?`,
-      body: `The layout disappears from the ${project.name} page and the explorer.${cur.units.total ? ` ${cur.units.total} units still use this type and will show without a floor plan.` : ""} Uploaded drawings stay in the Media library.`,
+      body: `The layout disappears from the ${project.name} page and the explorer.${cur.units.total ? ` ${cur.units.total} units still use this type and will show without a floor plan.` : ""}${cur.tourId ? " Its 360° tour stays, but is no longer linked from the floor plans." : ""} Uploaded drawings stay in the Media library.`,
       confirmLabel: "Delete layout",
     });
     if (!ok) return;
@@ -145,7 +184,16 @@ export function PlansConsole({ projects, slug, plans, inventoryTypes, initialId,
             {project.name} · {plans.length} layout{plans.length === 1 ? "" : "s"} · {plans.filter((p) => !p.media).length} without an uploaded drawing
           </div>
         </div>
-        <select className="ad-input" aria-label="Project" style={{ width: 240 }} value={slug} onChange={(e) => router.push(`/admin/floor-plans?project=${e.target.value}`)}>
+        <select
+          className="ad-input"
+          aria-label="Project"
+          style={{ width: 240 }}
+          value={slug}
+          onChange={async (e) => {
+            const next = e.target.value;
+            if (await discardOk()) router.push(`/admin/floor-plans?project=${next}`);
+          }}
+        >
           {projects.map((p) => (
             <option key={p.slug} value={p.slug}>
               {p.name}
@@ -180,7 +228,7 @@ export function PlansConsole({ projects, slug, plans, inventoryTypes, initialId,
           <span>
             Units in the inventory use {missing.join(", ")}, which {missing.length === 1 ? "has" : "have"} no layout yet. Those units show without a floor plan on the website.
           </span>
-          <button type="button" className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => (pick("new"), setDraft((d) => ({ ...d, type: missing[0] })))}>
+          <button type="button" className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => pick("new", missing[0])}>
             Add {missing[0]}
           </button>
         </div>
@@ -259,6 +307,16 @@ export function PlansConsole({ projects, slug, plans, inventoryTypes, initialId,
                     <ImageOff size={14} />
                     Remove drawing
                   </button>
+                )}
+                {cur && plans.length > 1 && (
+                  <>
+                    <button type="button" className="ad-btn ad-btn-icon" aria-label="Move layout up" title="Earlier in the floor plan table on the website" disabled={pending || index <= 0} onClick={() => move(-1)}>
+                      <ArrowUp size={16} />
+                    </button>
+                    <button type="button" className="ad-btn ad-btn-icon" aria-label="Move layout down" title="Later in the floor plan table on the website" disabled={pending || index === plans.length - 1} onClick={() => move(1)}>
+                      <ArrowDown size={16} />
+                    </button>
+                  </>
                 )}
                 {cur && (
                   <button type="button" className="ad-btn ad-btn-icon" onClick={remove} aria-label="Delete layout" title="Delete layout" disabled={pending}>
@@ -359,7 +417,7 @@ export function PlansConsole({ projects, slug, plans, inventoryTypes, initialId,
             <section className="ad-section">
               <div className="ad-section-head">
                 <h5>Room dimensions</h5>
-                <button type="button" className="ad-btn ad-btn-ghost" onClick={() => set("rooms", [...draft.rooms, { name: "", w: 0, l: 0 }])}>
+                <button type="button" className="ad-btn ad-btn-ghost" onClick={() => set("rooms", [...draft.rooms, room({ name: "", w: 0, l: 0 })])}>
                   <Plus size={15} />
                   Add room
                 </button>
@@ -379,7 +437,7 @@ export function PlansConsole({ projects, slug, plans, inventoryTypes, initialId,
                   </thead>
                   <tbody>
                     {draft.rooms.map((r, i) => (
-                      <tr key={i}>
+                      <tr key={r.k}>
                         <td>
                           <input className="ad-input" aria-label={`Room ${i + 1} name`} value={r.name} onChange={(e) => setRoom(i, { name: e.target.value })} aria-invalid={!!err[`room${i}`] || undefined} />
                           {err[`room${i}`] && (
@@ -399,7 +457,16 @@ export function PlansConsole({ projects, slug, plans, inventoryTypes, initialId,
                           {area(r) ? areaLabel(area(r)) : "—"}
                         </td>
                         <td>
-                          <button type="button" className="ad-btn ad-btn-icon" aria-label={`Remove ${r.name || `room ${i + 1}`}`} onClick={() => set("rooms", draft.rooms.filter((_, j) => j !== i))}>
+                          <button
+                            type="button"
+                            className="ad-btn ad-btn-icon"
+                            aria-label={`Remove ${r.name || `room ${i + 1}`}`}
+                            onClick={() => {
+                              set("rooms", draft.rooms.filter((_, j) => j !== i));
+                              // Room errors are numbered by position, so they no longer line up.
+                              setErr((e) => Object.fromEntries(Object.entries(e).filter(([x]) => !x.startsWith("room"))));
+                            }}
+                          >
                             <X size={15} />
                           </button>
                         </td>

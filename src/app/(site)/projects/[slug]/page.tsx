@@ -56,7 +56,8 @@ async function ProjectBody({ params }: { params: Params }) {
   const typeRows: TypeRow[] = types.map((t) => {
     const us = allUnits.filter((u) => u.type === t.type);
     const av = us.filter((u) => u.status === "A");
-    const k: UnitStatus = av.length > 3 ? "A" : av.length ? "R" : "S";
+    // A layout with no units in the inventory yet is shown as not released, not sold out.
+    const k: UnitStatus = !us.length ? "B" : av.length > 3 ? "A" : av.length ? "R" : "S";
     return { ...t, from: av.length ? Math.min(...av.map((u) => u.price)) : null, available: av.length, total: us.length, k };
   });
 

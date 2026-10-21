@@ -1,7 +1,7 @@
 "use server";
 
 import { refresh, updateTag } from "next/cache";
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, asc, eq, ne, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { PlanRoom } from "@/db/schema";
 import { requireAdmin, type Admin } from "@/lib/admin/auth";
@@ -20,8 +20,13 @@ function log(admin: Admin, ref: string, action: string, detail: Record<string, u
 }
 
 /** Only the edited project's layouts are re-read by the website. */
-function changed(slug: string) {
+function changed(slug: string, inventory = false) {
   updateTag(TAGS.plansOf(slug));
+  if (inventory) {
+    updateTag(TAGS.inventory);
+    updateTag(TAGS.inventoryOf(slug));
+    updateTag(TAGS.tours);
+  }
   refresh();
 }
 
@@ -51,6 +56,7 @@ export async function savePlan(id: number | null, input: PlanInput): Promise<Act
     if (!Number.isInteger(v) || v < 0 || v > 100000) fields[k] = "Enter a whole number of sqft.";
     ints[k] = v;
   }
+  if (!fields.sqft && ints.sqft < 100) fields.sqft = "Enter the interior area in sqft.";
   if (!Array.isArray(input.rooms) || input.rooms.length > 40) fields.rooms = "Up to 40 rooms.";
   const rooms: PlanRoom[] = (input.rooms ?? []).map((r) => ({ name: txt(r.name, 60), w: Math.round(Number(r.w) * 100) / 100, l: Math.round(Number(r.l) * 100) / 100 }));
   rooms.forEach((r, i) => {
@@ -66,6 +72,15 @@ export async function savePlan(id: number | null, input: PlanInput): Promise<Act
       .where(and(eq(schema.floorPlans.projectSlug, input.projectSlug), eq(schema.floorPlans.type, type), ...(id ? [ne(schema.floorPlans.id, id)] : [])))
       .limit(1);
     if (dup) fields.type = `${project.name} already has a ${type} layout.`;
+  }
+  if (!fields.key) {
+    // The website tells layouts apart by this code, so it must be unique in the project.
+    const [same] = await d
+      .select({ type: schema.floorPlans.type })
+      .from(schema.floorPlans)
+      .where(and(eq(schema.floorPlans.projectSlug, input.projectSlug), eq(schema.floorPlans.key, key), ...(id ? [ne(schema.floorPlans.id, id)] : [])))
+      .limit(1);
+    if (same) fields.key = `${same.type} already uses the code ${key}.`;
   }
   if (Object.keys(fields).length) return { ok: false, error: Object.values(fields)[0], fields };
 
@@ -87,12 +102,21 @@ export async function savePlan(id: number | null, input: PlanInput): Promise<Act
   if (!before) return { ok: false, error: "This layout no longer exists." };
   const diff = (Object.keys(values) as (keyof typeof values)[]).filter((k) => JSON.stringify(values[k]) !== JSON.stringify(before[k]));
   if (!diff.length) return { ok: true, data: { id }, message: "No changes to save" };
+  // Units and 360° tours are linked to a layout by its type name: a rename takes them along.
+  const renamed = type !== before.type;
+  const moved = renamed
+    ? [
+        d.update(schema.units).set({ type, updatedAt: new Date() }).where(and(eq(schema.units.projectSlug, before.projectSlug), eq(schema.units.type, before.type))),
+        d.update(schema.tours).set({ type }).where(and(eq(schema.tours.projectSlug, before.projectSlug), eq(schema.tours.type, before.type))),
+      ]
+    : [];
   await d.batch([
     d.update(schema.floorPlans).set({ ...values, updatedAt: new Date() }).where(eq(schema.floorPlans.id, id)),
-    log(admin, String(id), "updated", { name, project: before.projectSlug, fields: diff }),
+    log(admin, String(id), renamed ? `renamed from ${before.type}` : "updated", { name, project: before.projectSlug, fields: diff }),
+    ...moved,
   ]);
-  changed(before.projectSlug);
-  return { ok: true, data: { id }, message: "Saved · live on the website" };
+  changed(before.projectSlug, renamed);
+  return { ok: true, data: { id }, message: renamed ? `Renamed to ${type} · its units and tour moved with it` : "Saved · live on the website" };
 }
 
 /** Attaches an uploaded drawing (image or PDF from the Media library), or removes it with null. */
@@ -120,4 +144,24 @@ export async function deletePlan(id: number): Promise<ActionResult> {
   await log(admin, String(id), "deleted", { name, project: row.slug });
   changed(row.slug);
   return { ok: true, message: `${name} deleted` };
+}
+
+/** Moves a layout one place up or down: the order of the floor plan table on the website. */
+export async function movePlan(id: number, dir: -1 | 1): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const d = need();
+  const [row] = await d.select().from(schema.floorPlans).where(eq(schema.floorPlans.id, id)).limit(1);
+  if (!row) return { ok: false, error: "This layout no longer exists." };
+  const list = await d.select({ id: schema.floorPlans.id }).from(schema.floorPlans).where(eq(schema.floorPlans.projectSlug, row.projectSlug)).orderBy(asc(schema.floorPlans.sort), asc(schema.floorPlans.type));
+  const i = list.findIndex((p) => p.id === id);
+  const j = i + dir;
+  if (j < 0 || j >= list.length) return { ok: true };
+  [list[i], list[j]] = [list[j], list[i]];
+  await d.batch([
+    log(admin, String(id), dir < 0 ? "moved up" : "moved down", { name: `${row.type}${row.label ? ` · ${row.label}` : ""}`, project: row.projectSlug }),
+    // Renumber the whole list so earlier ties in sort order are settled too.
+    ...list.map((p, n) => d.update(schema.floorPlans).set({ sort: n }).where(eq(schema.floorPlans.id, p.id))),
+  ]);
+  changed(row.projectSlug);
+  return { ok: true };
 }

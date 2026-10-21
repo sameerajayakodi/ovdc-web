@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { testEmail, testIp } from "./testdb";
+import { sql, testEmail, testIp } from "./testdb";
 
 /** Fail a test on any uncaught page error or console error. */
 function watchErrors(page: Page) {
@@ -110,17 +110,26 @@ test.describe("navigation & preferences", () => {
   });
 });
 
+/** Published projects, optionally in one area: admins add projects, so counts come from the database. */
+async function projectCount(loc?: string) {
+  if (!sql) return loc ? 1 : 7;
+  const [{ n }] = (loc ? await sql`select count(*)::int n from projects where published and loc = ${loc}` : await sql`select count(*)::int n from projects where published`) as { n: number }[];
+  return n;
+}
+const projectsText = (n: number) => new RegExp(`${n}\\s+projects?$`);
+
 test.describe("projects", () => {
   test("filters narrow results and show an empty state", async ({ page }) => {
+    const all = await projectCount();
     await page.goto("/projects");
-    await expect(page.getByText(/7\s+projects/)).toBeVisible();
+    await expect(page.getByText(projectsText(all))).toBeVisible();
     await page.getByLabel("Location").first().selectOption("Negombo");
     await expect(page.getByText(/1\s+project$/)).toBeVisible();
     await expect(page.getByRole("heading", { name: "Lagoon Terraces" })).toBeVisible();
     await page.getByLabel(/Max price/).first().selectOption("50");
     await expect(page.getByText("No projects match these filters")).toBeVisible();
     await page.getByRole("button", { name: /Clear filters/ }).click();
-    await expect(page.getByText(/7\s+projects/)).toBeVisible();
+    await expect(page.getByText(projectsText(all))).toBeVisible();
   });
 
   test("home search carries filters to the listing", async ({ page }) => {
@@ -129,7 +138,7 @@ test.describe("projects", () => {
     await page.getByRole("button", { name: "Search" }).click();
     await expect(page).toHaveURL(/\/projects\?loc=Kandy/);
     await expect(page.getByRole("heading", { name: "Kandy Hill Villas" })).toBeVisible();
-    await expect(page.getByText(/1\s+project$/)).toBeVisible();
+    await expect(page.getByText(projectsText(await projectCount("Kandy")))).toBeVisible();
   });
 
   test("map view shows pins and a project card", async ({ page }) => {

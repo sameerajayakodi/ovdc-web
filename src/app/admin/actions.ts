@@ -28,6 +28,8 @@ export interface UnitChange {
   status?: UnitStatus;
   price?: { mode: "set" | "pct" | "add"; value: number };
   note?: string;
+  /** A floor plan type of the units' project; its bedrooms and areas are copied to the units */
+  type?: string;
 }
 
 /** Status / price edits for one or many units. Updates the public site immediately. */
@@ -42,11 +44,30 @@ export async function updateUnits(
   if (change.status && !STATUSES.includes(change.status)) return { ok: false, error: "Unknown status." };
   if (change.price && (!Number.isFinite(change.price.value) || !["set", "pct", "add"].includes(change.price.mode)))
     return { ok: false, error: "Enter a valid price change." };
-  if (!change.status && !change.price && change.note === undefined) return { ok: false, error: "Nothing to change." };
+  if (!change.status && !change.price && change.note === undefined && change.type === undefined) return { ok: false, error: "Nothing to change." };
 
   const current = await d.select().from(schema.units).where(inArray(schema.units.id, ids));
   if (current.length !== ids.length) return { ok: false, error: "Some units no longer exist. Reload the page." };
   const slugs = [...new Set(current.map((u) => u.projectSlug))];
+
+  let layout: Partial<typeof schema.units.$inferInsert> = {};
+  if (change.type !== undefined) {
+    if (slugs.length !== 1) return { ok: false, error: "Choose units from one project to change their type." };
+    const [plan] = await d
+      .select()
+      .from(schema.floorPlans)
+      .where(and(eq(schema.floorPlans.projectSlug, slugs[0]), eq(schema.floorPlans.type, String(change.type))))
+      .limit(1);
+    if (!plan) return { ok: false, error: "Add this type in Floor plans first." };
+    const beds = Number(plan.label.match(/\d+/)?.[0]);
+    layout = {
+      type: plan.type,
+      ...(plan.label ? { label: plan.label } : {}),
+      ...(beds > 0 ? { beds } : {}),
+      ...(plan.sqft ? { sqft: plan.sqft } : {}),
+      ...(plan.balcony ? { balcony: plan.balcony } : {}),
+    };
+  }
 
   const next = current.map((u) => {
     let price = u.priceMn;
@@ -62,7 +83,7 @@ export async function updateUnits(
   const note = change.note?.slice(0, 500);
   const now = new Date();
   const priceChanged = next.filter((x) => x.price !== x.u.priceMn);
-  const common = { ...(change.status ? { status: change.status } : {}), ...(note !== undefined ? { note } : {}), updatedAt: now };
+  const common = { ...(change.status ? { status: change.status } : {}), ...(note !== undefined ? { note } : {}), ...layout, updatedAt: now };
 
   const refs = current.map((u) => `${u.tower}-${u.code}`);
   const parts: string[] = [];
@@ -72,6 +93,7 @@ export async function updateUnits(
     const sign = value >= 0 ? "+" : "";
     parts.push(mode === "set" ? `price → LKR ${value} Mn` : mode === "pct" ? `price ${sign}${value}%` : `price ${sign}${value} Mn`);
   }
+  if (layout.type) parts.push(`type → ${layout.type}`);
   if (note !== undefined && !change.status && !change.price) parts.push("note updated");
 
   const log = d.insert(schema.activity).values({
@@ -83,6 +105,7 @@ export async function updateUnits(
       project: slugs.join(","),
       units: refs.slice(0, 50),
       ...(change.status ? { from: [...new Set(current.map((u) => u.status))], to: change.status } : {}),
+      ...(layout.type ? { fromType: [...new Set(current.map((u) => u.type))], type: layout.type } : {}),
       ...(priceChanged.length === 1 ? { previousMn: priceChanged[0].u.priceMn, priceMn: priceChanged[0].price } : {}),
     },
     at: now,
@@ -100,7 +123,10 @@ export async function updateUnits(
   }
 
   updateTag(TAGS.inventory);
-  for (const s of slugs) updateTag(TAGS.inventoryOf(s));
+  for (const s of slugs) {
+    updateTag(TAGS.inventoryOf(s));
+    if (layout.type) updateTag(TAGS.plansOf(s));
+  }
 
   const fresh = await d.select().from(schema.units).where(inArray(schema.units.id, ids));
   const { history } = slugs.length === 1 ? await getAdminUnits(slugs[0]) : { history: {} as Record<number, PricePoint[]> };

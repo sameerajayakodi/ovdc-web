@@ -127,6 +127,130 @@ test.describe("floor plans", () => {
     const left = (await sql!`select count(*)::int n from floor_plans where type = ${type}`) as { n: number }[];
     expect(left[0].n).toBe(0);
   });
+
+  test("a new type: validation, room edits, website row, order, assigning a unit and renaming", async ({ page, browser }) => {
+    test.setTimeout(240_000);
+    const t = tag();
+    const type = `E2E Type ${t}`;
+    const code = `Q${t.slice(0, 6)}`.toUpperCase();
+    // A tower B unit far from the ones other tests edit (admin.spec flips B-5A); restored at the end.
+    const [unit] = (await sql!`select id, tower, code, type, label, beds, sqft, balcony from units where project_slug = 'ocean-view-residences' and tower = 'B' and code <> '5A' order by floor desc, letter desc limit 1`) as {
+      id: number;
+      tower: string;
+      code: string;
+      type: string;
+      label: string;
+      beds: number;
+      sqft: number;
+      balcony: number;
+    }[];
+    const ref = `${unit.tower}-${unit.code}`;
+    try {
+      await signIn(page, "/admin/floor-plans?project=ocean-view-residences");
+      await page.getByRole("button", { name: "New layout" }).first().click();
+      await page.getByRole("button", { name: "Create layout" }).click();
+      await expect(page.getByText("Enter the unit type, e.g. Type C.").last()).toBeVisible();
+      await page.getByLabel("Unit type").fill(type);
+      // Fixing a field clears its error.
+      await expect(page.locator(".ad-error", { hasText: "Enter the unit type" })).toHaveCount(0);
+
+      // The short code must be unique in the project, and the interior area is required.
+      const [taken] = (await sql!`select key, type from floor_plans where project_slug = 'ocean-view-residences' order by sort limit 1`) as { key: string; type: string }[];
+      await page.getByLabel("Short code").fill(taken.key);
+      await page.getByLabel("Bedrooms").fill("2 Bed");
+      await page.getByLabel("Room 1 name").fill("Living & dining");
+      await page.getByLabel("Width of Living & dining").fill("6");
+      await page.getByLabel("Length of Living & dining").fill("4.5");
+      await page.getByLabel("Length of Living & dining").blur();
+      await page.getByRole("button", { name: "Create layout" }).click();
+      await expect(page.locator(".ad-error", { hasText: `${taken.type} already uses the code ${taken.key}.` })).toBeVisible();
+      await expect(page.locator(".ad-error", { hasText: "Enter the interior area in sqft." })).toBeVisible();
+      await page.getByLabel("Short code").fill(code);
+      await page.getByLabel("Interior (sqft)").fill("1100");
+
+      // Removing a room keeps the sizes of the rooms below it.
+      for (const [i, [name, w, l]] of ([["Bedroom", "3.5", "3.2"], ["Kitchen", "3", "2.5"]] as const).entries()) {
+        await page.getByRole("button", { name: "Add room" }).click();
+        await page.getByLabel(`Room ${i + 2} name`).fill(name);
+        await page.getByLabel(`Width of ${name}`).fill(w);
+        await page.getByLabel(`Length of ${name}`).fill(l);
+        await page.getByLabel(`Length of ${name}`).blur();
+      }
+      await page.getByRole("button", { name: "Remove Bedroom" }).click();
+      await expect(page.getByLabel("Width of Kitchen")).toHaveValue("3");
+      await expect(page.getByLabel("Length of Kitchen")).toHaveValue("2.5");
+      await page.getByRole("button", { name: "Create layout" }).click();
+      await expect(page.getByText(`${type} · 2 Bed added`)).toBeVisible({ timeout: 60_000 });
+      const [row] = (await sql!`select id, rooms from floor_plans where type = ${type}`) as { id: number; rooms: { name: string; w: number; l: number }[] }[];
+      expect(row.rooms.map((r) => [r.name, r.w, r.l])).toEqual([
+        ["Living & dining", 6, 4.5],
+        ["Kitchen", 3, 2.5],
+      ]);
+
+      // A layout without units is shown as coming, not sold out.
+      const site = await browser.newPage();
+      await site.goto("/projects/ocean-view-residences");
+      const plans = site.locator('[data-sec="plans"]');
+      const siteRow = plans.getByRole("row").filter({ hasText: type });
+      // The first visit after a change can still get the page prerendered at build time; a reload is fresh.
+      for (let i = 0; i < 6 && !(await siteRow.count()); i++) {
+        await site.waitForTimeout(1000);
+        await site.reload();
+      }
+      await expect(siteRow).toContainText("Release coming soon");
+      await expect(siteRow).not.toContainText("Sold out");
+      await siteRow.getByRole("button", { name: type }).click();
+      await expect(plans.getByRole("button", { pressed: true })).toHaveCount(1);
+      await expect(plans.getByText(`${type} · 2 Bed`, { exact: true })).toBeVisible();
+      await expect(plans.getByRole("link", { name: /See units of this type/ })).toHaveCount(0);
+
+      // Order: the new layout is last; move it up one place.
+      const order = async () => ((await sql!`select type from floor_plans where project_slug = 'ocean-view-residences' order by sort, type`) as { type: string }[]).map((r) => r.type);
+      const before = await order();
+      expect(before.at(-1)).toBe(type);
+      await page.getByRole("button", { name: "Move layout up" }).click();
+      await expect.poll(order).toEqual([...before.slice(0, -2), type, before.at(-2)]);
+
+      // Units admin: give a unit the new type; it takes the layout's sizes.
+      await page.goto(`/admin/units?unit=${ref}`);
+      const panel = page.getByRole("complementary", { name: "Unit details" });
+      await panel.getByLabel("Layout type").selectOption(type);
+      await panel.getByRole("button", { name: "Change" }).click();
+      await page.getByRole("alertdialog").getByRole("button", { name: "Apply" }).click();
+      await expect(page.getByText(`Unit ${ref} updated`)).toBeVisible({ timeout: 60_000 });
+      const [moved] = (await sql!`select type, label, beds, sqft from units where id = ${unit.id}`) as { type: string; label: string; beds: number; sqft: number }[];
+      expect(moved).toEqual({ type, label: "2 Bed", beds: 2, sqft: 1100 });
+
+      // Renaming the layout takes the unit with it.
+      await page.goto(`/admin/floor-plans?project=ocean-view-residences&type=${encodeURIComponent(type)}`);
+      await expect(page.getByText(/^1 · \d+ available$/)).toBeVisible();
+      await page.getByLabel("Unit type").fill(`${type} R`);
+      await page.getByRole("button", { name: "Save changes" }).click();
+      await expect(page.getByRole("alertdialog")).toContainText("1 units use");
+      await page.getByRole("alertdialog").getByRole("button", { name: "Rename" }).click();
+      await expect(page.getByText(`Renamed to ${type} R`)).toBeVisible({ timeout: 60_000 });
+      const [renamed] = (await sql!`select type from units where id = ${unit.id}`) as { type: string }[];
+      expect(renamed.type).toBe(`${type} R`);
+      await site.close();
+
+      // Unsaved edits are not lost by switching project.
+      await page.getByLabel("Bedrooms").fill("2 Bed + den");
+      await page.getByRole("combobox", { name: "Project", exact: true }).selectOption("the-marine-crest");
+      await expect(page.getByRole("alertdialog")).toContainText("Discard unsaved changes?");
+      await page.getByRole("alertdialog").getByRole("button", { name: "Cancel" }).click();
+      await expect(page).toHaveURL(/project=ocean-view-residences/);
+      await expect(page.getByLabel("Bedrooms")).toHaveValue("2 Bed + den");
+
+      await page.getByRole("button", { name: "Delete layout" }).click();
+      await page.getByRole("alertdialog").getByRole("button", { name: "Delete layout" }).click();
+      await expect(page.getByText(`${type} R · 2 Bed deleted`)).toBeVisible({ timeout: 60_000 });
+    } finally {
+      await sql!`update units set type = ${unit.type}, label = ${unit.label}, beds = ${unit.beds}, sqft = ${unit.sqft}, balcony = ${unit.balcony}, updated_at = now() where id = ${unit.id}`;
+      await sql!`delete from floor_plans where type like ${`${type}%`}`;
+      // Renumber the remaining layouts in their original order.
+      await sql!`update floor_plans f set sort = o.n from (select id, (row_number() over (order by sort, type))::int - 1 n from floor_plans where project_slug = 'ocean-view-residences') o where f.id = o.id`;
+    }
+  });
 });
 
 test.describe("360° tours", () => {

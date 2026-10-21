@@ -71,6 +71,36 @@ function StatusButtons({ current, disabled, onPick }: { current?: UnitStatus; di
   );
 }
 
+/** Assigns a floor plan type: the unit takes the layout's bedrooms and areas. */
+function TypePicker({ current, layouts, slug, pending, onPick }: { current?: string; layouts: Layout[]; slug: string; pending: boolean; onPick: (type: string) => void }) {
+  const [type, setType] = useState(current ?? "");
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <label className="ad-muted" style={{ fontSize: 12 }} htmlFor="unit-type">
+        Layout type
+      </label>
+      <div style={{ display: "flex", gap: 6 }}>
+        <select id="unit-type" className="ad-input" style={{ flex: 1 }} value={type} onChange={(e) => setType(e.target.value)}>
+          {!current && <option value="">Mixed types</option>}
+          {current && !layouts.some((l) => l.type === current) && <option value={current}>{current} (no floor plan)</option>}
+          {layouts.map((l) => (
+            <option key={l.type} value={l.type}>
+              {l.type}
+              {l.label ? ` · ${l.label}` : ""}
+            </option>
+          ))}
+        </select>
+        <button type="button" className="ad-btn ad-btn-secondary" disabled={pending || !type || type === current || !layouts.some((l) => l.type === type)} onClick={() => onPick(type)}>
+          Change
+        </button>
+      </div>
+      <span className="ad-help">
+        New types are added in <a href={`/admin/floor-plans?project=${slug}`}>Floor plans</a>.
+      </span>
+    </div>
+  );
+}
+
 function Single({ unit: u, slug, history, layouts, pending, onApply, onClear }: Props & { unit: AdminUnit }) {
   const [price, setPrice] = useState(String(u.priceMn));
   const [note, setNote] = useState(u.note);
@@ -197,6 +227,21 @@ function Single({ unit: u, slug, history, layouts, pending, onApply, onClear }: 
       </div>
 
       <div className={s.block}>
+        <TypePicker
+          current={u.type}
+          layouts={layouts}
+          slug={slug}
+          pending={pending}
+          onPick={(type) =>
+            onApply({ type }, [u.id], {
+              title: `Change ${ref} to ${type}?`,
+              body: "The unit takes that layout's bedrooms, interior and balcony area, and shows its floor plan on the website.",
+            })
+          }
+        />
+      </div>
+
+      <div className={s.block}>
         <label className="ad-label" htmlFor="unit-note">
           <span>Internal note</span>
           <span>{note.length} / 500</span>
@@ -238,7 +283,7 @@ function Single({ unit: u, slug, history, layouts, pending, onApply, onClear }: 
   );
 }
 
-function Bulk({ selected, pending, onApply, onClear }: Props) {
+function Bulk({ selected, slug, layouts, pending, onApply, onClear }: Props) {
   const [mode, setMode] = useState<"pct" | "add" | "set">("pct");
   const [val, setVal] = useState("");
   const n = Number(val);
@@ -288,6 +333,21 @@ function Bulk({ selected, pending, onApply, onClear }: Props) {
               title: `Mark ${selected.length} units as ${STATUS_META[k].label.toLowerCase()}?`,
               body: `${refs.slice(0, 8).join(", ")}${refs.length > 8 ? "…" : ""}. The website updates immediately.`,
               danger: selected.some((u) => u.status === "S") && k !== "S",
+            })
+          }
+        />
+      </div>
+      <div className={s.block}>
+        <TypePicker
+          key={selected.map((u) => u.id).join()}
+          current={new Set(selected.map((u) => u.type)).size === 1 ? selected[0].type : undefined}
+          layouts={layouts}
+          slug={slug}
+          pending={pending}
+          onPick={(type) =>
+            onApply({ type }, undefined, {
+              title: `Change ${selected.length} units to ${type}?`,
+              body: `${refs.slice(0, 8).join(", ")}${refs.length > 8 ? "…" : ""} take that layout's bedrooms, interior and balcony area.`,
             })
           }
         />

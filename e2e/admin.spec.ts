@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { sql } from "./testdb";
 
 /**
  * Admin console. Signs in with ADMIN_USERNAME / ADMIN_PASSWORD from .env.local,
@@ -150,7 +151,9 @@ test.describe("admin console", () => {
     await expect(page.getByRole("heading", { name: "Projects", level: 1 })).toBeVisible();
     await expect(page.getByRole("link", { name: "Ocean View Residences", exact: true })).toBeVisible();
     await page.getByLabel("Search projects").fill("kandy");
-    await expect(page.locator("tbody:visible tr")).toHaveCount(1);
+    // Admins add projects, so the expected matches come from the database (name, location, UDA no. or slug).
+    const [{ n }] = sql ? ((await sql`select count(*)::int n from projects where lower(name || ' ' || loc || ' ' || uda || ' ' || slug) like '%kandy%'`) as { n: number }[]) : [{ n: 1 }];
+    await expect(page.locator("tbody:visible tr")).toHaveCount(n);
     await page.screenshot({ path: `${SHOTS}/projects.png` });
 
     await page.getByRole("link", { name: "Kandy Hill Villas", exact: true }).click();
