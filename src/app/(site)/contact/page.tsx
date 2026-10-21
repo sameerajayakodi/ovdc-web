@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getProjects } from "@/lib/api";
-import { company, offices } from "@/lib/data/content";
+import { getProjects, getSiteSettings } from "@/lib/api";
 import { routes } from "@/lib/routes";
 import { PageHero } from "@/components/ui/PageHero";
 import { ContactForm } from "@/components/content/ContactForm";
@@ -9,12 +8,16 @@ import { OfficesMap } from "@/components/content/OfficesMap";
 import { IconPhone, IconWhatsApp } from "@/components/ui/Icons";
 import c from "@/components/content/content.module.css";
 
-export const metadata: Metadata = {
-  title: "Contact OVDC",
-  description: `Call ${company.hotline}, WhatsApp ${company.whatsapp} or visit our sales gallery on Marine Drive, Colombo 03.`,
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { company } = await getSiteSettings();
+  return {
+    title: "Contact OVDC",
+    description: `Call ${company.hotline}, WhatsApp ${company.whatsapp} or visit our sales gallery on Marine Drive, Colombo 03.`,
+  };
+}
 
 export default async function ContactPage() {
+  const { company, offices } = await getSiteSettings();
   const projects = (await getProjects()).filter((p) => p.status !== "done").map((p) => p.name);
 
   return (

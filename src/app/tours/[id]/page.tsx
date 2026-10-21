@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { getTour, getTours } from "@/lib/api";
+import { getSiteSettings, getTour, getTours } from "@/lib/api";
+import { SiteSettingsProvider } from "@/components/providers/SiteSettings";
 import { TourScreen } from "@/components/tour/TourScreen";
 
 export async function generateStaticParams() {
@@ -31,16 +32,16 @@ export default function TourPage({ params }: PageProps<"/tours/[id]">) {
 }
 
 async function Tour({ params }: { params: PageProps<"/tours/[id]">["params"] }) {
-  const tour = await getTour((await params).id);
+  const [tour, { company, fx }] = await Promise.all([getTour((await params).id), getSiteSettings()]);
   if (!tour) notFound();
   return (
-    <>
+    <SiteSettingsProvider value={{ company, fx }}>
       <h1 className="sr-only">
         {tour.title}, {tour.projectName} — 360° virtual tour
       </h1>
       <Suspense fallback={<Shell />}>
         <TourScreen tour={tour} />
       </Suspense>
-    </>
+    </SiteSettingsProvider>
   );
 }

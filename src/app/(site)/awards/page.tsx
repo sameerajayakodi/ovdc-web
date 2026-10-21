@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { awards, certifications } from "@/lib/data/editorial";
+import { certifications } from "@/lib/data/editorial";
+import { getAwards } from "@/lib/api";
 import { PageHero } from "@/components/ui/PageHero";
 import c from "@/components/content/content.module.css";
 
@@ -8,7 +9,8 @@ export const metadata: Metadata = {
   description: "Approvals, registrations and industry recognition for OVDC developments.",
 };
 
-export default function AwardsPage() {
+export default async function AwardsPage() {
+  const awards = await getAwards();
   return (
     <>
       <PageHero crumb="Awards" title="Awards & certifications" lead="The approvals every project carries, and the recognition our teams have earned." />
@@ -45,7 +47,10 @@ export default function AwardsPage() {
                 <span className="nums" style={{ fontFamily: "var(--font-heading)", fontSize: 32, color: "var(--color-gold)" }}>
                   {a.year}
                 </span>
-                <span style={{ fontSize: 17 }}>{a.title}</span>
+                <span style={{ fontSize: 17 }}>
+                  {a.title}
+                  {a.project && <span style={{ color: "var(--color-on-navy-muted)", fontSize: 14 }}> · {a.project}</span>}
+                </span>
               </span>
               <span style={{ color: "var(--color-on-navy-muted)" }}>{a.by}</span>
             </li>

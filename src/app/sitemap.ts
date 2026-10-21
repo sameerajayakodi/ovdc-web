@@ -1,12 +1,11 @@
 import type { MetadataRoute } from "next";
-import { getAllUnitRefs, getProjects, getTours } from "@/lib/api";
-import { articles, roles } from "@/lib/data/editorial";
+import { getAllUnitRefs, getArticles, getProjects, getRoles, getTours } from "@/lib/api";
 import { routes } from "@/lib/routes";
 
 const BASE = "https://ovdc.lk";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [projects, tours, units] = await Promise.all([getProjects(), getTours(), getAllUnitRefs()]);
+  const [projects, tours, units, articles, roles] = await Promise.all([getProjects(), getTours(), getAllUnitRefs(), getArticles(), getRoles()]);
   const pages = [
     "/", routes.projects, routes.tours, routes.about, routes.contact, routes.bookVisit(), routes.news, routes.gallery, routes.progress,
     routes.buyersGuide, routes.overseas, routes.calculators, routes.awards, routes.careers, routes.faq, routes.portal, routes.legal,

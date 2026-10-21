@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type * as THREE from "three";
 import type { Tour, TourHotspotInfo } from "@/lib/types";
 import { routes } from "@/lib/routes";
-import { company } from "@/lib/data/content";
+import { useSite } from "@/components/providers/SiteSettings";
 import { UNIT_STATUS } from "@/lib/status";
 import { money, perSqft } from "@/lib/money";
 import { usePrefs } from "@/components/providers/Preferences";
@@ -23,6 +23,7 @@ type Three = typeof THREE;
  * cone, day/night, VR split view, gyroscope, fullscreen and share.
  */
 export function TourViewer({ tour, embedded = false, backHref }: { tour: Tour; embedded?: boolean; backHref?: string }) {
+  const { company } = useSite();
   const router = useRouter();
   const { currency } = usePrefs();
   const scenes = tour.scenes;

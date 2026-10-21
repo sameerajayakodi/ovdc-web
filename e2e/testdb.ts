@@ -24,6 +24,8 @@ const isTestName = (n: unknown) => typeof n === "string" && /^E2E /.test(n);
 
 export async function cleanupTestRows() {
   if (!sql) return;
+  await cleanupTestSales();
+  await cleanupTestContent();
   const leads = (await sql`select id from leads where name like 'E2E %' or email like ${`%@${TEST_DOMAIN}`}`) as { id: number }[];
   const ids = leads.map((r) => r.id);
   const visitIds = ids.length ? ((await sql`select id from visits where lead_id = any(${ids})`) as { id: number }[]).map((r) => r.id) : [];
@@ -87,4 +89,44 @@ export async function leadIdByEmail(email: string) {
   if (!sql) throw new Error("DATABASE_URL not set");
   const [row] = (await sql`select id from leads where email = ${email} order by id desc limit 1`) as { id: number }[];
   return row?.id;
+}
+
+/**
+ * Test buyers are named "E2E …". Puts any unit they still hold back on sale,
+ * deletes their private documents from Cloudinary, then their rows and log entries.
+ */
+export async function cleanupTestSales() {
+  if (!sql) return;
+  const custs = ((await sql`select id from customers where name like 'E2E %'`) as { id: number }[]).map((r) => r.id);
+  if (!custs.length) return;
+  const held = (await sql`select unit_id, status from reservations where customer_id = any(${custs}) and status in ('reserved', 'sold')`) as { unit_id: number; status: string }[];
+  for (const h of held) await sql`update units set status = 'A', updated_at = now() where id = ${h.unit_id} and status = ${h.status === "sold" ? "S" : "R"}`;
+  const docs = (await sql`select public_id, resource_type from customer_documents where customer_id = any(${custs})`) as { public_id: string; resource_type: string }[];
+  const cloud = process.env.CLOUDINARY_CLOUD_NAME;
+  const key = process.env.CLOUDINARY_API_KEY;
+  const secret = process.env.CLOUDINARY_API_SECRET;
+  for (const d of docs) {
+    if (!cloud || !key || !secret) break;
+    const timestamp = Math.round(Date.now() / 1000);
+    const signature = createHash("sha1").update(`invalidate=true&public_id=${d.public_id}&timestamp=${timestamp}&type=authenticated${secret}`).digest("hex");
+    await fetch(`https://api.cloudinary.com/v1_1/${cloud}/${d.resource_type}/destroy`, {
+      method: "POST",
+      body: new URLSearchParams({ public_id: d.public_id, timestamp: String(timestamp), invalidate: "true", type: "authenticated", api_key: key, signature }),
+    }).catch(() => {});
+  }
+  await sql`delete from activity where entity in ('sale', 'customer') and (detail->>'name' like 'E2E %' or (entity = 'customer' and ref = any(${custs.map(String)})))`;
+  // Payments and documents go with their reservation and customer (on delete cascade).
+  await sql`delete from reservations where customer_id = any(${custs})`;
+  await sql`delete from customers where id = any(${custs})`;
+}
+
+/** Test posts, questions, roles, testimonials and awards start with "E2E ". */
+export async function cleanupTestContent() {
+  if (!sql) return;
+  await sql`delete from activity where entity = 'content' and detail->>'name' like 'E2E %'`;
+  await sql`delete from posts where title like 'E2E %'`;
+  await sql`delete from faqs where q like 'E2E %'`;
+  await sql`delete from jobs where title like 'E2E %'`;
+  await sql`delete from testimonials where name like 'E2E %'`;
+  await sql`delete from awards where title like 'E2E %'`;
 }

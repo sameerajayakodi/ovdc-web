@@ -1,5 +1,5 @@
 import type { ProjectStatus, UnitStatus } from "@/lib/types";
-import type { LeadEventType, LeadKind, LeadStage, MediaKind, PlanRoom, TourHotspotRow, VisitStatus, VisitType } from "@/db/schema";
+import type { ActivityRow, LeadEventType, LeadKind, LeadStage, MediaKind, PlanRoom, TourHotspotRow, VisitStatus, VisitType } from "@/db/schema";
 
 /** Serializable shapes passed from admin Server Components to client UI. */
 export interface AdminUnit {
@@ -63,7 +63,7 @@ export interface ActivityItem {
   id: number;
   at: string;
   actor: string;
-  entity: "unit" | "project" | "auth" | "lead" | "visit" | "media" | "plan" | "tour";
+  entity: ActivityRow["entity"];
   ref: string;
   action: string;
   detail: Record<string, unknown>;

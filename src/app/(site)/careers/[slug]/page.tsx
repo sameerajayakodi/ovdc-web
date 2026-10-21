@@ -2,18 +2,20 @@ import type { Metadata } from "next";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { roles } from "@/lib/data/editorial";
+import { getRole, getRoles } from "@/lib/api";
 import { routes } from "@/lib/routes";
 import { SimpleLeadForm } from "@/components/content/SimpleLeadForm";
 import c from "@/components/content/content.module.css";
 
-export function generateStaticParams() {
-  return roles.map((r) => ({ slug: r.slug }));
+export async function generateStaticParams() {
+  const roles = await getRoles();
+  // At least one entry is required; a placeholder renders the 404 page.
+  return roles.length ? roles.map((r) => ({ slug: r.slug })) : [{ slug: "none" }];
 }
 
 export async function generateMetadata({ params }: PageProps<"/careers/[slug]">): Promise<Metadata> {
   const slug = (await params).slug;
-  const r = roles.find((x) => x.slug === slug);
+  const r = await getRole(slug);
   return r ? { title: `${r.title} · Careers`, description: r.summary } : {};
 }
 
@@ -27,7 +29,7 @@ export default function RolePage({ params }: PageProps<"/careers/[slug]">) {
 
 async function Role({ params }: { params: PageProps<"/careers/[slug]">["params"] }) {
   const slug = (await params).slug;
-  const r = roles.find((x) => x.slug === slug);
+  const r = await getRole(slug);
   if (!r) notFound();
   return (
     <>

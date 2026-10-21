@@ -6,6 +6,7 @@ import {
   AlarmClock,
   ArrowRightLeft,
   CalendarPlus,
+  KeyRound,
   Copy,
   GitMerge,
   LoaderCircle,
@@ -252,6 +253,12 @@ export function LeadDrawer({ id, summary, initial, agents, projects, now, onClos
             <CalendarPlus size={16} />
             Book visit
           </Link>
+          {lead.stage !== "won" && lead.stage !== "lost" && lead.name.trim() && (
+            <Link className="ad-btn ad-btn-secondary" href={`/admin/sales?lead=${id}`}>
+              <KeyRound size={16} />
+              Reserve unit
+            </Link>
+          )}
         </div>
 
         <div className={s.dGrid}>

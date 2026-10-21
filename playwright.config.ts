@@ -28,7 +28,7 @@ export default defineConfig({
     },
   },
   projects: [
-    { name: "desktop", use: { ...devices["Desktop Chrome"], channel: "chrome", viewport: { width: 1440, height: 900 } }, testIgnore: /(mobile|admin|content)\.spec\.ts/ },
+    { name: "desktop", use: { ...devices["Desktop Chrome"], channel: "chrome", viewport: { width: 1440, height: 900 } }, testIgnore: /(mobile|admin|content|sales|cms)\.spec\.ts/ },
     { name: "mobile", use: { ...devices["Pixel 7"], channel: "chrome" }, testMatch: /mobile\.spec\.ts/ },
     // Tests that edit what the website shows (unit status, projects, floor plans, tours, media)
     // invalidate its cached pages. Run them after the public-site tests, so no site test is
@@ -36,7 +36,7 @@ export default defineConfig({
     {
       name: "writes",
       use: { ...devices["Desktop Chrome"], channel: "chrome", viewport: { width: 1440, height: 900 } },
-      testMatch: /(admin|content)\.spec\.ts/,
+      testMatch: /(admin|content|sales|cms)\.spec\.ts/,
       dependencies: ["desktop", "mobile"],
     },
   ],

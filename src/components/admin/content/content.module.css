@@ -1,0 +1,352 @@
+.wrap {
+  display: flex;
+  min-height: 100%;
+  flex-wrap: wrap;
+}
+.nav {
+  flex: 0 0 220px;
+  border-right: 2px solid var(--a-divider);
+  padding: 16px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  font-size: 13.5px;
+  color: var(--a-text);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+}
+.navItem > span:first-child {
+  flex: 1;
+}
+.navItem:hover {
+  background: color-mix(in srgb, var(--a-text) 5%, transparent);
+}
+.navItem[aria-current] {
+  background: var(--a-surface);
+  border-left-color: var(--a-accent);
+  font-weight: 700;
+}
+.navItem:focus-visible {
+  outline: 2px solid var(--a-accent);
+  outline-offset: -2px;
+}
+.badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  background: var(--a-accent-100);
+  color: var(--a-gold-text);
+  white-space: nowrap;
+}
+.main {
+  flex: 1 1 600px;
+  min-width: 0;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ───── List editor ───── */
+.listWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1040px;
+}
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.row {
+  background: var(--a-surface);
+  border-top: 2px solid var(--a-divider);
+}
+.row[data-hidden] {
+  opacity: 0.7;
+}
+.row[data-hidden] .rowTitle::after {
+  content: " · hidden";
+  font-weight: 400;
+  color: var(--a-muted);
+}
+.rowHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 10px 0 14px;
+}
+.rowNo {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  border: 1px solid var(--a-divider);
+  color: var(--a-muted);
+  flex: none;
+}
+.rowTitle {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rowFields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 14px 14px;
+}
+.rowFields > [style*="grid-column"] {
+  flex: 1 1 100%;
+}
+.rowFields[data-compact] {
+  gap: 8px;
+}
+.excerpt {
+  font-size: 12.5px;
+  color: var(--a-muted);
+  max-width: 420px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+/* ───── Save bar ───── */
+.bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--a-bg);
+  border-top: 2px solid var(--a-divider);
+  flex-wrap: wrap;
+}
+.state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--a-muted);
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--a-available);
+}
+.bar[data-dirty] .dot {
+  background: var(--a-reserved);
+}
+.bar[data-dirty] .state {
+  color: var(--a-warn-text);
+  font-weight: 600;
+}
+
+/* ───── News ───── */
+.news {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.posts {
+  flex: 0 0 300px;
+  background: var(--a-surface);
+  border-top: 2px solid var(--a-divider);
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 120px);
+  display: flex;
+  flex-direction: column;
+}
+.posts ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+}
+.postsHead {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-bottom: 1px solid var(--a-divider);
+}
+.postItem {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px 14px;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  border-bottom: 1px solid var(--a-divider);
+  font-size: 13.5px;
+}
+.postItem:hover {
+  background: color-mix(in srgb, var(--a-text) 4%, transparent);
+}
+.postItem[aria-current] {
+  border-left-color: var(--a-accent);
+  background: var(--a-bg);
+}
+.postItem:focus-visible {
+  outline: 2px solid var(--a-accent);
+  outline-offset: -2px;
+}
+.postMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--a-muted);
+}
+.editor {
+  flex: 1 1 560px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 900px;
+}
+.fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+  padding: 16px;
+}
+.coverRow {
+  display: flex;
+  gap: 16px;
+  padding: 0 16px 16px;
+  flex-wrap: wrap;
+}
+.coverPreview {
+  flex: 0 0 240px;
+  aspect-ratio: 16 / 10;
+  background: var(--a-n100);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.coverPreview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.coverPick {
+  flex: 1 1 300px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.thumbs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.thumb {
+  all: unset;
+  flex: none;
+  width: 80px;
+  height: 55px;
+  cursor: pointer;
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+  position: relative;
+}
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.thumb[aria-pressed="true"] {
+  outline-color: var(--a-accent);
+}
+.thumb[aria-pressed="true"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 4px var(--a-bg);
+}
+.thumb:focus-visible {
+  outline-color: var(--a-text);
+}
+.blocks {
+  list-style: none;
+  margin: 0;
+  padding: 0 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.blockTools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.blockH {
+  font-weight: 700;
+  font-size: 15px !important;
+}
+
+@media (max-width: 760px) {
+  .nav {
+    flex: 1 1 100%;
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 2px solid var(--a-divider);
+    padding: 8px;
+  }
+  .nav > :global(.ad-kicker) {
+    display: none;
+  }
+  .navItem {
+    white-space: nowrap;
+    border-left: 0;
+    border-bottom: 2px solid transparent;
+  }
+  .navItem[aria-current] {
+    border-bottom-color: var(--a-accent);
+  }
+  .main {
+    padding: 16px;
+  }
+  .posts {
+    position: static;
+    flex: 1 1 100%;
+    max-height: 320px;
+  }
+  .coverPreview {
+    flex: 1 1 100%;
+  }
+}

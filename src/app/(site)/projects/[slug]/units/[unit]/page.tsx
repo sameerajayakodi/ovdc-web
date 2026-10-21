@@ -3,8 +3,7 @@ import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { getAllUnitRefs, getProject, getProjectContent, getTourForType, getTowers, getUnit, getUnitTypes, unitRef } from "@/lib/api";
-import { company } from "@/lib/data/content";
+import { getAllUnitRefs, getProject, getProjectContent, getTourForType, getTowers, getUnit, getUnitTypes, unitRef, getSiteSettings } from "@/lib/api";
 import { photos, typePhoto, type PhotoKey } from "@/lib/data/media";
 import { UNIT_STATUS } from "@/lib/status";
 import { routes } from "@/lib/routes";
@@ -45,6 +44,7 @@ export default function UnitPage({ params }: PageProps<"/projects/[slug]/units/[
 const GALLERY: PhotoKey[] = ["kitchen", "bedroomSea", "bathroom", "balconySea"];
 
 async function UnitBody({ params }: { params: Params }) {
+  const { company } = await getSiteSettings();
   const { slug, unit: ref } = await params;
   const [p, u, towers, types, content] = await Promise.all([getProject(slug), getUnit(slug, ref), getTowers(slug), getUnitTypes(slug), getProjectContent(slug)]);
   if (!p || !u || !towers) notFound();

@@ -3,8 +3,8 @@ import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { getProject, getProjectContent, getProjects, getTour, getTowers, getUnitTypes } from "@/lib/api";
-import { AMENITY_ICONS, company } from "@/lib/data/content";
+import { getProject, getProjectContent, getProjects, getTour, getTowers, getUnitTypes, getSiteSettings } from "@/lib/api";
+import { AMENITY_ICONS } from "@/lib/data/content";
 import { routes } from "@/lib/routes";
 import { UNIT_STATUS } from "@/lib/status";
 import type { UnitStatus } from "@/lib/types";
@@ -43,6 +43,7 @@ export default function ProjectPage({ params }: PageProps<"/projects/[slug]">) {
 }
 
 async function ProjectBody({ params }: { params: Params }) {
+  const { company } = await getSiteSettings();
   const slug = (await params).slug;
   const p = await getProject(slug);
   if (!p) notFound();

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { faqGroups } from "@/lib/data/editorial";
+import { getFaqGroups } from "@/lib/api";
 import { routes } from "@/lib/routes";
 import { PageHero } from "@/components/ui/PageHero";
 import { FaqSearch } from "@/components/content/FaqSearch";
@@ -11,7 +11,8 @@ export const metadata: Metadata = {
   description: "Reservations, payment plans, housing loans, buying from abroad, construction and handover — answered.",
 };
 
-export default function FaqPage() {
+export default async function FaqPage() {
+  const faqGroups = await getFaqGroups();
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { roles } from "@/lib/data/editorial";
+import { getRoles } from "@/lib/api";
 import { photos } from "@/lib/data/media";
 import { routes } from "@/lib/routes";
 import { PageHero } from "@/components/ui/PageHero";
@@ -12,7 +12,8 @@ export const metadata: Metadata = {
   description: "Join the engineers, architects and advisors building homes along Sri Lanka’s coast. Open roles in projects, sales, design and marketing.",
 };
 
-export default function CareersPage() {
+export default async function CareersPage() {
+  const roles = await getRoles();
   return (
     <>
       <PageHero
@@ -30,7 +31,7 @@ export default function CareersPage() {
         <div className={c.sectionHead}>
           <div className={c.headText}>
             <span className="kicker">Open roles</span>
-            <h2 className="h-section">{roles.length} positions open</h2>
+            <h2 className="h-section">{roles.length ? `${roles.length} position${roles.length === 1 ? "" : "s"} open` : "No open positions right now"}</h2>
           </div>
         </div>
         <ul className={c.list}>

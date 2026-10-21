@@ -1,7 +1,14 @@
 import type { Currency } from "./types";
 
-/** LKR per one unit of each currency. Sample rates (Oct 2026) — move to admin Settings. */
+/** LKR per one unit of each currency: defaults, replaced by the rates saved in admin Settings. */
 export const FX: Record<Currency, number> = { LKR: 1, USD: 300, AUD: 198, AED: 81.7 };
+
+/** Rates in use. The site's settings provider sets them once per page from the database. */
+let rates: Record<Currency, number> = { ...FX };
+export function setRates(next: Partial<Record<Currency, number>>) {
+  rates = { ...FX, ...next, LKR: 1 };
+}
+export const rate = (cur: Currency) => rates[cur] ?? FX[cur];
 
 export const CURRENCIES: Currency[] = ["LKR", "USD", "AUD", "AED"];
 
@@ -18,7 +25,7 @@ const mn = (v: number) => (v % 1 === 0 ? String(v) : v.toFixed(1));
 export function money(lkrMn: number | null | undefined, cur: Currency = "LKR"): string {
   if (lkrMn == null) return "Price on launch";
   if (cur === "LKR") return `LKR ${mn(lkrMn)} Mn`;
-  const v = Math.round((lkrMn * 1e6) / FX[cur] / 1000) * 1000;
+  const v = Math.round((lkrMn * 1e6) / rate(cur) / 1000) * 1000;
   return `${cur} ${v.toLocaleString("en-US")}`;
 }
 
@@ -31,7 +38,7 @@ export function price(lkrMn: number | null | undefined, cur: Currency = "LKR") {
 }
 
 export function perSqft(lkrMn: number, sqft: number, cur: Currency = "LKR") {
-  const v = (lkrMn * 1e6) / sqft / FX[cur];
+  const v = (lkrMn * 1e6) / sqft / rate(cur);
   return `${cur} ${Math.round(v).toLocaleString("en-US")} / sqft`;
 }
 

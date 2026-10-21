@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { getFeaturedUnits, getProject, getProjects, getTourForType } from "@/lib/api";
-import { homeAmenities, stats, testimonials, why, company } from "@/lib/data/content";
+import { getFeaturedUnits, getProject, getProjects, getSiteSettings, getTestimonials, getTourForType } from "@/lib/api";
+import { homeAmenities, stats, why } from "@/lib/data/content";
 import { routes } from "@/lib/routes";
 import { photos, type PhotoKey } from "@/lib/data/media";
 import { HomeSearch } from "@/components/home/HomeSearch";
@@ -27,7 +27,7 @@ const AMENITY_PHOTO: Record<string, PhotoKey> = {
 const HERO_VIDEO = process.env.NEXT_PUBLIC_HERO_VIDEO;
 
 export default async function HomePage() {
-  const [projects, featured, ovr] = await Promise.all([getProjects(), getFeaturedUnits(), getProject("ocean-view-residences")]);
+  const [projects, featured, ovr, testimonials, { company }] = await Promise.all([getProjects(), getFeaturedUnits(), getProject("ocean-view-residences"), getTestimonials(), getSiteSettings()]);
   const tourIds = await Promise.all(featured.map((u) => getTourForType(u.projectSlug, u.type).then((t) => t?.id ?? null)));
   const building = projects.filter((p) => p.status === "uc");
 

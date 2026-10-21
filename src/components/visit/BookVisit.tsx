@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { isPhone, submitLead } from "@/lib/leads";
 import { Honeypot } from "@/components/ui/Honeypot";
 import { routes } from "@/lib/routes";
-import { company } from "@/lib/data/content";
+import { useSite } from "@/components/providers/SiteSettings";
 import { photos, projectPhoto } from "@/lib/data/media";
 import { ImageSlot } from "@/components/ui/ImageSlot";
 import { IconCheck } from "@/components/ui/Icons";
@@ -57,6 +57,7 @@ function DatePick({ value, onChange, sunday }: { value: string; onChange: (iso: 
 }
 
 export function BookVisit({ projects }: { projects: P[] }) {
+  const { company } = useSite();
   const sp = useSearchParams();
   const initialProject = projects.find((p) => p.slug === sp.get("project"))?.slug ?? "";
   const unit = sp.get("unit") ?? "";

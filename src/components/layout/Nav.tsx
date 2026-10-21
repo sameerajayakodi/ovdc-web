@@ -7,7 +7,7 @@ import { usePrefs } from "@/components/providers/Preferences";
 import { CURRENCIES, CURRENCY_NAMES, money } from "@/lib/money";
 import { mainNav, routes } from "@/lib/routes";
 import type { Project } from "@/lib/types";
-import { company } from "@/lib/data/content";
+import { useSite } from "@/components/providers/SiteSettings";
 import { ImageSlot } from "@/components/ui/ImageSlot";
 import { photos, projectPhoto } from "@/lib/data/media";
 import { IconChevronDown, IconClose, IconHeart, IconMenu } from "@/components/ui/Icons";
@@ -48,6 +48,7 @@ export function NavFallback() {
 }
 
 export function Nav({ projects }: { projects: NavProject[] }) {
+  const { company } = useSite();
   const pathname = usePathname();
   const overlay = pathname === "/";
   const { currency, setCurrency, toast, shortlist } = usePrefs();

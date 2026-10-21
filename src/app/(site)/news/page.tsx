@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { articles } from "@/lib/data/editorial";
-import { photos } from "@/lib/data/media";
+import { articlePhoto, getArticles } from "@/lib/api";
 import { routes } from "@/lib/routes";
 import { ImageSlot } from "@/components/ui/ImageSlot";
 import { PageHero } from "@/components/ui/PageHero";
@@ -14,7 +13,9 @@ export const metadata: Metadata = {
 
 const fmt = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
-export default function NewsPage() {
+export default async function NewsPage() {
+  const articles = await getArticles();
+  if (!articles.length) return <PageHero crumb="News" title="News & insights" lead="New posts are on the way." />;
   const [lead, ...rest] = [...articles].sort((a, b) => b.date.localeCompare(a.date));
   return (
     <>
@@ -23,7 +24,7 @@ export default function NewsPage() {
       <section className={c.section} style={{ paddingBottom: 0 }}>
         <Link href={routes.article(lead.slug)} className={c.split} style={{ textDecoration: "none", alignItems: "center" }}>
           <span className="zoom" style={{ position: "relative", aspectRatio: "16/10", display: "block" }}>
-            <ImageSlot photo={photos[lead.photo]} priority sizes="(max-width: 760px) 100vw, 50vw" />
+            <ImageSlot photo={articlePhoto(lead)} priority sizes="(max-width: 760px) 100vw, 50vw" />
           </span>
           <span style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <span className="kicker">
@@ -43,7 +44,7 @@ export default function NewsPage() {
           {rest.map((a) => (
             <Link key={a.slug} href={routes.article(a.slug)} className={c.card}>
               <span className={`zoom ${c.media}`}>
-                <ImageSlot photo={photos[a.photo]} sizes="(max-width: 760px) 100vw, 33vw" />
+                <ImageSlot photo={articlePhoto(a)} sizes="(max-width: 760px) 100vw, 33vw" />
               </span>
               <span className="kicker">
                 {a.category} · {fmt(a.date)}

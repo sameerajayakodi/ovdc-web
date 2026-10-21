@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
+import { getSiteSettings } from "@/lib/api";
 import Link from "next/link";
-import { company } from "@/lib/data/content";
 import { photos } from "@/lib/data/media";
 import { routes } from "@/lib/routes";
 import { PageHero } from "@/components/ui/PageHero";
@@ -28,7 +28,8 @@ const ZONES = [
   ["North America", "Toronto / New York", "Calls by appointment, evenings"],
 ];
 
-export default function OverseasPage() {
+export default async function OverseasPage() {
+  const { company } = await getSiteSettings();
   return (
     <>
       <PageHero

@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { usePrefs } from "@/components/providers/Preferences";
-import { company } from "@/lib/data/content";
+import { useSite } from "@/components/providers/SiteSettings";
 import { routes } from "@/lib/routes";
 import { IconWhatsApp } from "@/components/ui/Icons";
 import styles from "./Dock.module.css";
 
 /** Cookie consent + WhatsApp button. Stacked on mobile so they never overlap. */
 export function Dock({ hideWhatsApp }: { hideWhatsApp?: boolean }) {
+  const { company } = useSite();
   const { cookieConsent, setCookieConsent } = usePrefs();
   // Project and unit pages have their own Call / WhatsApp / Enquire bar on small screens.
   const pathname = usePathname();

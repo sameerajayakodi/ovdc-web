@@ -8,6 +8,8 @@
 import { pathToFileURL } from "node:url";
 import { unitTypes } from "../src/lib/data/inventory";
 import { tours } from "../src/lib/data/tours";
+import { articles, awards, faqGroups, roles } from "../src/lib/data/editorial";
+import { testimonials } from "../src/lib/data/content";
 import type { PlanRoom } from "../src/db/schema";
 import { db as cliDb, pool, schema } from "./db";
 
@@ -86,12 +88,39 @@ export async function seedContent(db: Db) {
       })),
     );
   }
-  return { plans, tours: added };
+  // Website content: only into empty tables, so admin edits are never overwritten.
+  const empty = async (t: typeof schema.posts | typeof schema.faqs | typeof schema.jobs | typeof schema.testimonials | typeof schema.awards) =>
+    (await db.select({ id: t.id }).from(t).limit(1)).length === 0;
+  let content = 0;
+  if (await empty(schema.posts)) {
+    await db.insert(schema.posts).values(
+      articles.map((a) => ({ slug: a.slug, title: a.title, dek: a.dek, category: a.category, body: a.body, photo: a.photo, author: "OVDC", published: true, publishAt: new Date(`${a.date}T09:00:00+05:30`) })),
+    );
+    content += articles.length;
+  }
+  if (await empty(schema.faqs)) {
+    const rows = faqGroups.flatMap((g, gi) => g.items.map((q, i) => ({ group: g.group, q: q.q, a: q.a, sort: gi * 100 + i })));
+    await db.insert(schema.faqs).values(rows);
+    content += rows.length;
+  }
+  if (await empty(schema.jobs)) {
+    await db.insert(schema.jobs).values(roles.map((r, i) => ({ slug: r.slug, title: r.title, team: r.team, location: r.location, type: r.type, summary: r.summary, duties: r.duties, needs: r.needs, sort: i })));
+    content += roles.length;
+  }
+  if (await empty(schema.testimonials)) {
+    await db.insert(schema.testimonials).values(testimonials.map((t, i) => ({ name: t.name, role: t.role, quote: t.quote, sort: i })));
+    content += testimonials.length;
+  }
+  if (await empty(schema.awards)) {
+    await db.insert(schema.awards).values(awards.map((a, i) => ({ year: a.year, title: a.title, by: a.by, sort: i })));
+    content += awards.length;
+  }
+  return { plans, tours: added, content };
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   seedContent(cliDb)
-    .then((r) => console.log(`Floor plans added: ${r.plans} · tours added: ${r.tours}`))
+    .then((r) => console.log(`Floor plans added: ${r.plans} · tours added: ${r.tours} · content rows added: ${r.content}`))
     .catch((e) => {
       console.error(e);
       process.exitCode = 1;

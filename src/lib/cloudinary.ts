@@ -39,24 +39,37 @@ export function verifyUpload(publicId: string, version: number, signature: strin
 
 export type ResourceType = "image" | "video" | "raw";
 
-export function uploadTicket(folder: string, resourceType: ResourceType) {
+/** Delivery type: "authenticated" files have no public URL and are fetched with privateDownload(). */
+export type DeliveryType = "upload" | "authenticated";
+
+export function uploadTicket(folder: string, resourceType: ResourceType, type: DeliveryType = "upload") {
   const c = need();
   const timestamp = Math.round(Date.now() / 1000);
-  const params = { folder: `${ROOT}/${folder}`, timestamp, use_filename: "true", unique_filename: "true" };
+  const params = { folder: `${ROOT}/${folder}`, timestamp, use_filename: "true", unique_filename: "true", ...(type === "upload" ? {} : { type }) };
   return {
     url: `https://api.cloudinary.com/v1_1/${c.cloud}/${resourceType}/upload`,
     fields: { ...params, timestamp: String(timestamp), api_key: c.key, signature: sign(params, c.secret) },
   };
 }
 
-export async function destroy(publicId: string, resourceType: ResourceType) {
+export async function destroy(publicId: string, resourceType: ResourceType, type: DeliveryType = "upload") {
   const c = need();
   const timestamp = Math.round(Date.now() / 1000);
-  const body = new URLSearchParams({ public_id: publicId, timestamp: String(timestamp), invalidate: "true", api_key: c.key, signature: sign({ public_id: publicId, timestamp, invalidate: "true" }, c.secret) });
+  const params = { public_id: publicId, timestamp, invalidate: "true", ...(type === "upload" ? {} : { type }) };
+  const body = new URLSearchParams({ ...Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)])), api_key: c.key, signature: sign(params, c.secret) });
   const res = await fetch(`https://api.cloudinary.com/v1_1/${c.cloud}/${resourceType}/destroy`, { method: "POST", body });
   const json = (await res.json().catch(() => ({}))) as { result?: string };
   // "not found" is fine: the file is already gone.
   return json.result === "ok" || json.result === "not found";
+}
+
+/** A short-lived, signed link that downloads an authenticated file (Cloudinary's private download API). */
+export function privateDownload(publicId: string, resourceType: ResourceType, format: string, ttlSeconds = 300) {
+  const c = need();
+  const timestamp = Math.round(Date.now() / 1000);
+  const params = { public_id: publicId, format, type: "authenticated", attachment: "true", expires_at: timestamp + ttlSeconds, timestamp };
+  const q = new URLSearchParams({ ...Object.fromEntries(Object.entries(params).filter(([, v]) => v !== "").map(([k, v]) => [k, String(v)])), api_key: c.key, signature: sign(params, c.secret) });
+  return `https://api.cloudinary.com/v1_1/${c.cloud}/${resourceType}/download?${q}`;
 }
 
 /** Plan usage and per-file limits, for the storage meter and upload checks. */

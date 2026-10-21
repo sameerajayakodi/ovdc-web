@@ -5,7 +5,7 @@ import { useState } from "react";
 import { isPhone, submitLead } from "@/lib/leads";
 import { Honeypot } from "@/components/ui/Honeypot";
 import { routes } from "@/lib/routes";
-import { company } from "@/lib/data/content";
+import { useSite } from "@/components/providers/SiteSettings";
 import { IconCheck, IconWhatsApp } from "@/components/ui/Icons";
 import { Price, PriceLkr } from "@/components/ui/Price";
 import s from "./project.module.css";
@@ -40,6 +40,7 @@ export function EnquiryCard({
   fromNote: string;
   unitTypes: string[];
 }) {
+  const { company } = useSite();
   const { state, setState, err, setErr } = useLeadForm();
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {

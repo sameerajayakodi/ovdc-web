@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
+import { getSiteSettings } from "@/lib/api";
 import { photos } from "@/lib/data/media";
-import { company } from "@/lib/data/content";
 import { PageHero } from "@/components/ui/PageHero";
 import { SimpleLeadForm } from "@/components/content/SimpleLeadForm";
 import c from "@/components/content/content.module.css";
@@ -18,7 +18,8 @@ const FEATURES = [
   ["Support", "Raise a question or a snag and follow it to resolution."],
 ];
 
-export default function PortalPage() {
+export default async function PortalPage() {
+  const { company } = await getSiteSettings();
   return (
     <>
       <PageHero

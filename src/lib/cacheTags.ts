@@ -7,4 +7,8 @@ export const TAGS = {
   plans: "plans",
   plansOf: (slug: string) => `plans:${slug}`,
   tours: "tours",
+  /** News, FAQ, careers, testimonials, awards */
+  content: "content",
+  /** Company details, contacts, offices, exchange rates */
+  settings: "settings",
 } as const;

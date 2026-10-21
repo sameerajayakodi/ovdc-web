@@ -290,7 +290,7 @@ textarea.ad-input { min-height: 96px; resize: vertical; line-height: 1.5; }
   display: flex; flex-direction: column; animation: adSlideIn 0.2s ease-out;
 }
 @keyframes adSlideIn { from { transform: translateX(24px); opacity: 0; } }
-.ad-dialog-wide { width: min(640px, 100%); max-height: calc(100svh - 48px); overflow: auto; }
+.ad-dialog.ad-dialog-wide { width: min(640px, 100%); max-height: calc(100svh - 48px); overflow: auto; }
 
 /* — surfaces — */
 .ad-section { background: var(--a-surface); min-width: 0; display: flex; flex-direction: column; }

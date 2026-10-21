@@ -8,16 +8,19 @@
  * site falls back to the sample data in ./data.
  */
 import { cacheLife, cacheTag } from "next/cache";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, lte } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { inventory as sampleInventory, unitTypes } from "./data/inventory";
 import { projects as sampleProjects } from "./data/projects";
-import { featuredUnits } from "./data/content";
+import { featuredUnits, company as sampleCompany, offices as sampleOffices, testimonials as sampleTestimonials } from "./data/content";
+import { articles as sampleArticles, awards as sampleAwards, faqGroups as sampleFaq, roles as sampleRoles, type Article, type Role } from "./data/editorial";
+import { photos, type Photo, type PhotoKey } from "./data/media";
+import { FX } from "./money";
 import { tours as sampleTours } from "./data/tours";
 import { cld, isCloudinary, panoUrl } from "./mediaUrl";
 import { TAGS } from "./cacheTags";
 import { parseUnitRef, unitRef } from "./unitRef";
-import type { Floor, Project, Unit, UnitType, Tour, TourScene } from "./types";
+import type { Currency, Floor, Project, Unit, UnitType, Tour, TourScene } from "./types";
 import type { ProjectRow, UnitRow } from "@/db/schema";
 
 export { parseUnitRef, unitRef };
@@ -297,4 +300,159 @@ export async function getTourForType(slug: string, type: string): Promise<Tour |
 export async function getProjectContent(slug: string) {
   const { projectContent } = await import("./data/projectContent");
   return projectContent[slug] ?? null;
+}
+
+/* ───────── Website content (admin: Website content) ───────── */
+
+export type SiteArticle = Article & { cover?: string };
+
+const minutesOf = (body: { h?: string; p: string }[]) =>
+  Math.max(1, Math.round(body.reduce((n, b) => n + `${b.h ?? ""} ${b.p}`.split(/\s+/).filter(Boolean).length, 0) / 200));
+
+/** Published posts whose publish time has passed (one by slug, or all, newest first). */
+async function loadArticles(slug?: string): Promise<SiteArticle[]> {
+  if (!db) return slug ? sampleArticles.filter((a) => a.slug === slug) : sampleArticles;
+  const rows = await db
+    .select({ post: schema.posts, cover: schema.media.url })
+    .from(schema.posts)
+    .leftJoin(schema.media, eq(schema.media.id, schema.posts.coverMediaId))
+    .where(and(eq(schema.posts.published, true), lte(schema.posts.publishAt, new Date()), ...(slug ? [eq(schema.posts.slug, slug)] : [])))
+    .orderBy(desc(schema.posts.publishAt));
+  return rows.map(({ post: p, cover }) => ({
+    slug: p.slug,
+    title: p.title,
+    dek: p.dek,
+    category: p.category,
+    date: ymdColombo(p.publishAt),
+    minutes: minutesOf(p.body ?? []),
+    photo: (p.photo in photos ? p.photo : "site1") as PhotoKey,
+    body: p.body ?? [],
+    ...(cover ? { cover: cld(cover, "f_auto,q_auto,w_2000,c_limit") } : {}),
+  }));
+}
+
+export async function getArticles(): Promise<SiteArticle[]> {
+  "use cache";
+  cacheTag(TAGS.content);
+  // Scheduled posts appear within minutes of their publish time.
+  cacheLife("minutes");
+  return loadArticles();
+}
+
+/** Cached under its own slug, so a post published after the build never 404s. */
+export async function getArticle(slug: string): Promise<SiteArticle | null> {
+  "use cache";
+  cacheTag(TAGS.content);
+  cacheLife("minutes");
+  return (await loadArticles(slug))[0] ?? null;
+}
+
+/** The photo for a news card: the uploaded cover, else the stock photo. */
+export function articlePhoto(a: SiteArticle): Photo {
+  return a.cover ? { src: a.cover, alt: a.title, ar: 1.6 } : photos[a.photo];
+}
+
+async function loadRoles(slug?: string): Promise<Role[]> {
+  if (!db) return slug ? sampleRoles.filter((r) => r.slug === slug) : sampleRoles;
+  const today = ymdColombo(new Date());
+  const rows = await db
+    .select()
+    .from(schema.jobs)
+    .where(and(eq(schema.jobs.open, true), ...(slug ? [eq(schema.jobs.slug, slug)] : [])))
+    .orderBy(asc(schema.jobs.sort), asc(schema.jobs.title));
+  return rows
+    .filter((j) => !j.closes || j.closes >= today)
+    .map((j) => ({ slug: j.slug, title: j.title, team: j.team, location: j.location, type: j.type, summary: j.summary, duties: j.duties ?? [], needs: j.needs ?? [] }));
+}
+
+export async function getRoles(): Promise<Role[]> {
+  "use cache";
+  cacheTag(TAGS.content);
+  cacheLife("hours");
+  return loadRoles();
+}
+
+export async function getRole(slug: string): Promise<Role | null> {
+  "use cache";
+  cacheTag(TAGS.content);
+  cacheLife("hours");
+  return (await loadRoles(slug))[0] ?? null;
+}
+
+export async function getFaqGroups(): Promise<{ group: string; items: { q: string; a: string }[] }[]> {
+  "use cache";
+  cacheTag(TAGS.content);
+  cacheLife("hours");
+  if (!db) return sampleFaq;
+  const rows = await db.select().from(schema.faqs).where(eq(schema.faqs.published, true)).orderBy(asc(schema.faqs.sort), asc(schema.faqs.id));
+  const groups: { group: string; items: { q: string; a: string }[] }[] = [];
+  for (const r of rows) {
+    const g = groups.find((x) => x.group === r.group) ?? (groups.push({ group: r.group, items: [] }), groups[groups.length - 1]);
+    g.items.push({ q: r.q, a: r.a });
+  }
+  return groups;
+}
+
+export async function getAwards(): Promise<{ year: string; title: string; by: string; project: string }[]> {
+  "use cache";
+  cacheTag(TAGS.content);
+  cacheLife("hours");
+  if (!db) return sampleAwards.map((a) => ({ ...a, project: "" }));
+  const rows = await db.select().from(schema.awards).where(eq(schema.awards.shown, true)).orderBy(asc(schema.awards.sort), desc(schema.awards.year));
+  return rows.map((a) => ({ year: a.year, title: a.title, by: a.by, project: a.project }));
+}
+
+export async function getTestimonials(): Promise<{ id: string; quote: string; name: string; role: string }[]> {
+  "use cache";
+  cacheTag(TAGS.content);
+  cacheLife("hours");
+  if (!db) return sampleTestimonials;
+  const rows = await db.select().from(schema.testimonials).where(eq(schema.testimonials.published, true)).orderBy(asc(schema.testimonials.sort), asc(schema.testimonials.id));
+  return rows.map((t) => ({ id: String(t.id), quote: t.quote, name: t.name, role: t.role }));
+}
+
+/* ───────── Site settings (admin: Settings) ───────── */
+
+export type Company = typeof sampleCompany & { vat: string; socials: Record<string, string> };
+export type Office = (typeof sampleOffices)[number];
+export interface SiteSettings {
+  company: Company;
+  offices: Office[];
+  /** LKR per unit of each foreign currency */
+  fx: Record<Currency, number>;
+}
+
+/** "+94 77 123 4567" → "tel:+94771234567" / "https://wa.me/94771234567" */
+const telHref = (n: string) => `tel:${n.replace(/[^\d+]/g, "")}`;
+const waHref = (n: string) => `https://wa.me/${n.replace(/\D/g, "").replace(/^0/, "94")}`;
+
+export async function getSiteSettings(): Promise<SiteSettings> {
+  "use cache";
+  cacheTag(TAGS.settings);
+  cacheLife("hours");
+  return loadSiteSettings();
+}
+
+/** Saved settings over the built-in defaults, uncached (the admin Settings page reads this). */
+export async function loadSiteSettings(): Promise<SiteSettings> {
+  const base: SiteSettings = { company: { ...sampleCompany, vat: "", socials: {} }, offices: sampleOffices, fx: { ...FX } };
+  if (!db) return base;
+  const rows = await db.select().from(schema.settings).where(inArray(schema.settings.key, ["company", "offices", "fx"]));
+  const get = <T,>(k: string) => rows.find((r) => r.key === k)?.value as T | undefined;
+  const c = get<Partial<Company>>("company") ?? {};
+  const company: Company = { ...base.company, ...c, address: c.address?.length ? c.address : base.company.address, socials: { ...base.company.socials, ...(c.socials ?? {}) } };
+  company.hotlineHref = telHref(company.hotline);
+  company.whatsappHref = waHref(company.whatsapp);
+  const offices = get<Office[]>("offices");
+  const fx = get<Partial<Record<Currency, number>>>("fx") ?? {};
+  return {
+    company,
+    offices: offices?.length ? offices : base.offices,
+    fx: { ...base.fx, ...Object.fromEntries(Object.entries(fx).filter(([, v]) => typeof v === "number" && v > 0)), LKR: 1 },
+  };
+}
+
+/** "YYYY-MM-DD" in Colombo time. */
+function ymdColombo(d: Date) {
+  return new Date(d.getTime() + 330 * 60_000).toISOString().slice(0, 10);
 }

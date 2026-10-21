@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { company } from "@/lib/data/content";
+import { getSiteSettings } from "@/lib/api";
 import { routes } from "@/lib/routes";
 import { IconFacebook, IconInstagram, IconLinkedIn, IconYouTube } from "@/components/ui/Icons";
 import { NewsletterForm } from "./NewsletterForm";
@@ -40,7 +40,16 @@ const cols = [
   },
 ];
 
-export function Footer() {
+/** Shown only when a link is saved in admin Settings → Contacts. */
+const SOCIALS = [
+  ["instagram", "Instagram", IconInstagram],
+  ["facebook", "Facebook", IconFacebook],
+  ["youtube", "YouTube", IconYouTube],
+  ["linkedin", "LinkedIn", IconLinkedIn],
+] as const;
+
+export async function Footer() {
+  const { company } = await getSiteSettings();
   return (
     <footer className={styles.footer}>
       <div className={styles.inner}>
@@ -81,20 +90,15 @@ export function Footer() {
             <a href={`mailto:${company.email}`} className={styles.link}>
               {company.email}
             </a>
-            <div className={styles.social}>
-              <a href="#" aria-label="Instagram">
-                <IconInstagram />
-              </a>
-              <a href="#" aria-label="Facebook">
-                <IconFacebook />
-              </a>
-              <a href="#" aria-label="YouTube">
-                <IconYouTube />
-              </a>
-              <a href="#" aria-label="LinkedIn">
-                <IconLinkedIn />
-              </a>
-            </div>
+            {SOCIALS.some(([k]) => company.socials[k]) && (
+              <div className={styles.social}>
+                {SOCIALS.filter(([k]) => company.socials[k]).map(([k, label, Icon]) => (
+                  <a key={k} href={company.socials[k]} aria-label={label} target="_blank" rel="noopener">
+                    <Icon />
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

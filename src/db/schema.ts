@@ -81,7 +81,7 @@ export const activity = pgTable(
     id: serial("id").primaryKey(),
     at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
     actor: text("actor").notNull(),
-    entity: text("entity").$type<"unit" | "project" | "auth" | "lead" | "visit" | "media" | "plan" | "tour">().notNull(),
+    entity: text("entity").$type<"unit" | "project" | "auth" | "lead" | "visit" | "media" | "plan" | "tour" | "sale" | "customer" | "content" | "settings">().notNull(),
     ref: text("ref").notNull(),
     action: text("action").notNull(),
     detail: jsonb("detail").$type<Record<string, unknown>>().notNull().default({}),
@@ -131,6 +131,8 @@ export const leads = pgTable(
     /** First time the lead left the "new" stage, for response-time stats */
     respondedAt: timestamp("responded_at", { withTimezone: true }),
     lostReason: text("lost_reason").notNull().default(""),
+    /** Job applications (kind "application") move through their own hiring stages */
+    hrStage: text("hr_stage").$type<HrStage>().notNull().default("new"),
     /** Salted SHA-256 of the sender's IP, for throttling. Never the raw address. */
     ipHash: text("ip_hash").notNull().default(""),
   },
@@ -323,6 +325,174 @@ export const tourScenes = pgTable(
   (t) => [uniqueIndex("tour_scenes_key").on(t.tourId, t.key), index("tour_scenes_sort").on(t.tourId, t.sort)],
 );
 
+/* ───────── Reservations, sales and customers ───────── */
+
+export type ReservationStatus = "reserved" | "sold" | "released" | "cancelled";
+export type PaymentPlan = "construction" | "30-70" | "fx";
+export type HrStage = "new" | "shortlisted" | "interview" | "offer" | "rejected";
+
+/** Buyers: created from a lead when a unit is reserved, or added by hand. */
+export const customers = pgTable(
+  "customers",
+  {
+    id: serial("id").primaryKey(),
+    name: text("name").notNull(),
+    nic: text("nic").notNull().default(""),
+    mobile: text("mobile").notNull().default(""),
+    email: text("email").notNull().default(""),
+    address: text("address").notNull().default(""),
+    notes: text("notes").notNull().default(""),
+    leadId: integer("lead_id").references(() => leads.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("customers_name").on(t.name)],
+);
+
+/** A unit on hold for a customer (reserved) or sold to them. */
+export const reservations = pgTable(
+  "reservations",
+  {
+    id: serial("id").primaryKey(),
+    /** RS-2026-0001 */
+    ref: text("ref").notNull().unique(),
+    unitId: integer("unit_id")
+      .notNull()
+      .references(() => units.id, { onDelete: "restrict" }),
+    customerId: integer("customer_id")
+      .notNull()
+      .references(() => customers.id, { onDelete: "restrict" }),
+    status: text("status").$type<ReservationStatus>().notNull().default("reserved"),
+    /** Agreed price, LKR millions */
+    priceMn: mn("price_mn").notNull(),
+    plan: text("plan").$type<PaymentPlan>().notNull().default("construction"),
+    /** 0 draft · 1 sent · 2 signed by customer · 3 countersigned · 4 registered */
+    agreementStep: integer("agreement_step").notNull().default(0),
+    holdUntil: timestamp("hold_until", { withTimezone: true }),
+    agent: text("agent").notNull().default(""),
+    note: text("note").notNull().default(""),
+    soldAt: timestamp("sold_at", { withTimezone: true }),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    createdBy: text("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("reservations_unit").on(t.unitId), index("reservations_customer").on(t.customerId), index("reservations_status").on(t.status)],
+);
+
+/** The payment schedule of a reservation, one row per milestone; paid rows carry the receipt. */
+export const payments = pgTable(
+  "payments",
+  {
+    id: serial("id").primaryKey(),
+    reservationId: integer("reservation_id")
+      .notNull()
+      .references(() => reservations.id, { onDelete: "cascade" }),
+    sort: integer("sort").notNull().default(0),
+    milestone: text("milestone").notNull(),
+    condition: text("condition").notNull().default(""),
+    /** Share of the price, percent (the booking fee row uses its fixed amount) */
+    pct: real("pct").notNull().default(0),
+    /** LKR */
+    amount: integer("amount").notNull(),
+    /** "YYYY-MM-DD", or "" until the milestone is reached */
+    dueDate: text("due_date").notNull().default(""),
+    paidAt: text("paid_at").notNull().default(""),
+    paidAmount: integer("paid_amount").notNull().default(0),
+    method: text("method").notNull().default(""),
+    reference: text("reference").notNull().default(""),
+    /** RC-2026-0001 */
+    receiptNo: text("receipt_no").unique(),
+    recordedBy: text("recorded_by").notNull().default(""),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("payments_reservation").on(t.reservationId, t.sort)],
+);
+
+/** Private files (NIC copies, agreements). Stored as authenticated Cloudinary assets, never public URLs. */
+export const customerDocuments = pgTable("customer_documents", {
+  id: serial("id").primaryKey(),
+  customerId: integer("customer_id")
+    .notNull()
+    .references(() => customers.id, { onDelete: "cascade" }),
+  publicId: text("public_id").notNull().unique(),
+  resourceType: text("resource_type").$type<"image" | "raw">().notNull(),
+  name: text("name").notNull(),
+  format: text("format").notNull().default(""),
+  bytes: integer("bytes").notNull().default(0),
+  uploadedBy: text("uploaded_by").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/* ───────── Website content ───────── */
+
+export interface PostBlock {
+  h?: string;
+  p: string;
+}
+
+/** News & blog posts. Shown on the site when published and the publish time has passed. */
+export const posts = pgTable("posts", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  dek: text("dek").notNull().default(""),
+  category: text("category").$type<"Construction" | "Buying guide" | "Lifestyle" | "Company">().notNull().default("Company"),
+  body: jsonb("body").$type<PostBlock[]>().notNull().default([]),
+  /** Stock photo key (src/lib/data/media.ts) used when no cover is uploaded */
+  photo: text("photo").notNull().default(""),
+  coverMediaId: integer("cover_media_id").references(() => media.id, { onDelete: "set null" }),
+  author: text("author").notNull().default(""),
+  published: boolean("published").notNull().default(false),
+  publishAt: timestamp("publish_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const faqs = pgTable("faqs", {
+  id: serial("id").primaryKey(),
+  group: text("group").notNull(),
+  q: text("q").notNull(),
+  a: text("a").notNull(),
+  sort: integer("sort").notNull().default(0),
+  published: boolean("published").notNull().default(true),
+});
+
+export const jobs = pgTable("jobs", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  team: text("team").notNull().default(""),
+  location: text("location").notNull().default(""),
+  type: text("type").notNull().default("Full-time"),
+  summary: text("summary").notNull().default(""),
+  duties: jsonb("duties").$type<string[]>().notNull().default([]),
+  needs: jsonb("needs").$type<string[]>().notNull().default([]),
+  /** "YYYY-MM-DD" or "" for open until filled */
+  closes: text("closes").notNull().default(""),
+  open: boolean("open").notNull().default(true),
+  sort: integer("sort").notNull().default(0),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const testimonials = pgTable("testimonials", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  role: text("role").notNull().default(""),
+  quote: text("quote").notNull(),
+  published: boolean("published").notNull().default(true),
+  sort: integer("sort").notNull().default(0),
+});
+
+export const awards = pgTable("awards", {
+  id: serial("id").primaryKey(),
+  year: text("year").notNull(),
+  title: text("title").notNull(),
+  by: text("by").notNull().default(""),
+  project: text("project").notNull().default(""),
+  shown: boolean("shown").notNull().default(true),
+  sort: integer("sort").notNull().default(0),
+});
+
 export type ProjectRow = typeof projects.$inferSelect;
 export type UnitRow = typeof units.$inferSelect;
 export type ActivityRow = typeof activity.$inferSelect;
@@ -333,3 +503,12 @@ export type MediaRow = typeof media.$inferSelect;
 export type FloorPlanRow = typeof floorPlans.$inferSelect;
 export type TourRow = typeof tours.$inferSelect;
 export type TourSceneRow = typeof tourScenes.$inferSelect;
+export type CustomerRow = typeof customers.$inferSelect;
+export type ReservationRow = typeof reservations.$inferSelect;
+export type PaymentRow = typeof payments.$inferSelect;
+export type CustomerDocumentRow = typeof customerDocuments.$inferSelect;
+export type PostRow = typeof posts.$inferSelect;
+export type FaqRow = typeof faqs.$inferSelect;
+export type JobRow = typeof jobs.$inferSelect;
+export type TestimonialRow = typeof testimonials.$inferSelect;
+export type AwardRow = typeof awards.$inferSelect;

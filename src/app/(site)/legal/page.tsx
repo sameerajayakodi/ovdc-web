@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
+import { getSiteSettings } from "@/lib/api";
 import Link from "next/link";
-import { company } from "@/lib/data/content";
 import { routes } from "@/lib/routes";
 import { PageHero } from "@/components/ui/PageHero";
 import c from "@/components/content/content.module.css";
@@ -11,7 +11,8 @@ export const metadata: Metadata = {
 };
 
 /* Draft wording for review by OVDC's legal counsel before launch. */
-export default function LegalPage() {
+export default async function LegalPage() {
+  const { company } = await getSiteSettings();
   return (
     <>
       <PageHero crumb="Legal" title="Privacy, terms & cookies" lead="Last updated October 2026." />

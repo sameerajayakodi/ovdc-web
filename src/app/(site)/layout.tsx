@@ -2,14 +2,15 @@ import { Suspense } from "react";
 import { Nav, NavFallback } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { Dock } from "@/components/layout/Dock";
-import { getProjects } from "@/lib/api";
+import { getProjects, getSiteSettings } from "@/lib/api";
+import { SiteSettingsProvider } from "@/components/providers/SiteSettings";
 
 export default async function SiteLayout({ children }: LayoutProps<"/">) {
-  const projects = await getProjects();
+  const [projects, { company, fx }] = await Promise.all([getProjects(), getSiteSettings()]);
   const navProjects = projects.map(({ id, slug, name, loc, status, from }) => ({ id, slug, name, loc, status, from }));
 
   return (
-    <>
+    <SiteSettingsProvider value={{ company, fx }}>
       <a href="#main" className="skip-link">
         Skip to content
       </a>
@@ -23,6 +24,6 @@ export default async function SiteLayout({ children }: LayoutProps<"/">) {
       <Suspense fallback={null}>
         <Dock />
       </Suspense>
-    </>
+    </SiteSettingsProvider>
   );
 }

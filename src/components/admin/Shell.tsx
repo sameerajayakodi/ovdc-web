@@ -59,15 +59,15 @@ const NAV: { label: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin/leads", label: "Leads", icon: Inbox },
       { href: "/admin/visits", label: "Site visits", icon: CalendarDays },
-      { label: "Reservations & sales", icon: FileSignature },
-      { label: "Customers", icon: Users },
+      { href: "/admin/sales", label: "Reservations & sales", icon: FileSignature },
+      { href: "/admin/customers", label: "Customers", icon: Users },
     ],
   },
   {
     label: "Website",
     items: [
-      { label: "Website content", icon: PanelsTopLeft },
-      { label: "Settings", icon: Settings },
+      { href: "/admin/content", label: "Website content", icon: PanelsTopLeft },
+      { href: "/admin/settings", label: "Settings", icon: Settings },
     ],
   },
 ];

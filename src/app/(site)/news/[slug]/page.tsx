@@ -3,20 +3,21 @@ import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { articles } from "@/lib/data/editorial";
-import { photos } from "@/lib/data/media";
+import { articlePhoto, getArticle, getArticles } from "@/lib/api";
 import { routes } from "@/lib/routes";
 import { ImageSlot } from "@/components/ui/ImageSlot";
 import { ShortlistShare } from "@/components/project/ProjectActions";
 import c from "@/components/content/content.module.css";
 
-export function generateStaticParams() {
-  return articles.map((a) => ({ slug: a.slug }));
+export async function generateStaticParams() {
+  const articles = await getArticles();
+  // At least one entry is required; a placeholder renders the 404 page.
+  return articles.length ? articles.map((a) => ({ slug: a.slug })) : [{ slug: "none" }];
 }
 
 export async function generateMetadata({ params }: PageProps<"/news/[slug]">): Promise<Metadata> {
   const slug = (await params).slug;
-  const a = articles.find((x) => x.slug === slug);
+  const a = await getArticle(slug);
   return a ? { title: a.title, description: a.dek, openGraph: { type: "article", publishedTime: a.date } } : {};
 }
 
@@ -32,8 +33,9 @@ export default function ArticlePage({ params }: PageProps<"/news/[slug]">) {
 
 async function Article({ params }: { params: PageProps<"/news/[slug]">["params"] }) {
   const slug = (await params).slug;
-  const a = articles.find((x) => x.slug === slug);
+  const a = await getArticle(slug);
   if (!a) notFound();
+  const articles = await getArticles();
   const related = articles.filter((x) => x.slug !== a.slug && x.category === a.category).concat(articles.filter((x) => x.slug !== a.slug && x.category !== a.category)).slice(0, 3);
 
   return (
@@ -51,7 +53,7 @@ async function Article({ params }: { params: PageProps<"/news/[slug]">["params"]
       </header>
       <div className="wrap">
         <div style={{ position: "relative", height: "clamp(240px, 40vw, 600px)" }}>
-          <ImageSlot photo={photos[a.photo]} priority sizes="100vw" />
+          <ImageSlot photo={articlePhoto(a)} priority sizes="100vw" />
         </div>
       </div>
       <div className={c.section} style={{ alignItems: "center" }}>
@@ -74,7 +76,7 @@ async function Article({ params }: { params: PageProps<"/news/[slug]">["params"]
           {related.map((r) => (
             <Link key={r.slug} href={routes.article(r.slug)} className={c.card}>
               <span className={`zoom ${c.media}`}>
-                <ImageSlot photo={photos[r.photo]} sizes="(max-width: 760px) 100vw, 33vw" />
+                <ImageSlot photo={articlePhoto(r)} sizes="(max-width: 760px) 100vw, 33vw" />
               </span>
               <span className="kicker" style={{ color: "var(--color-kicker-sand)" }}>
                 {r.category}
