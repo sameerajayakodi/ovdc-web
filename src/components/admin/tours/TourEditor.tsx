@@ -20,10 +20,11 @@ import {
   X,
 } from "lucide-react";
 import { deleteTour, saveTour, type TourDraft } from "@/app/admin/tour-actions";
-import type { TourHotspotRow } from "@/db/schema";
+import type { PlanRoom, TourHotspotRow } from "@/db/schema";
 import { useAdminUi } from "../AdminRoot";
 import { uploadFile } from "../media/upload";
 import { TourViewer } from "@/components/tour/TourViewer";
+import { MinimapPanel } from "./MinimapPanel";
 import { embedHost, embedSrc } from "@/lib/embed";
 import { slugify } from "@/lib/admin/format";
 import { cld, isCloudinary, panoUrl } from "@/lib/mediaUrl";
@@ -33,7 +34,7 @@ import s from "./tours.module.css";
 
 interface Props {
   tour: AdminTour;
-  types: { type: string; label: string }[];
+  types: { type: string; label: string; rooms: PlanRoom[] }[];
   unitRefs: { ref: string; type: string }[];
   library: AdminMedia[];
   uploads: { maxPx: number } | null;
@@ -52,6 +53,7 @@ const toDraft = (t: AdminTour): TourDraft => ({
   bathrooms: t.bathrooms,
   parking: t.parking,
   scenes: t.scenes.map((x) => ({ ...x, hotspots: x.hotspots.map((h) => ({ ...h })) })),
+  planRooms: t.planRooms.map((r) => ({ ...r })),
 });
 
 /** jsonb stores keys in its own order; compare drafts by value. */
@@ -188,7 +190,7 @@ export function TourEditor({ tour, types, unitRefs, library, uploads }: Props) {
       const added = items.map((it) => {
         const key = uniqueKey(it.name, taken);
         taken.push(key);
-        return { key, name: it.name, short: it.name.split(" ")[0], note: "", panorama: it.url, thumb: "", mediaId: it.mediaId, yaw: 0, rot: 0, planX: 100, planY: 70, hotspots: [] } satisfies AdminScene;
+        return { key, name: it.name, short: it.name.split(" ")[0], note: "", panorama: it.url, thumb: "", mediaId: it.mediaId, yaw: 0, rot: 0, planX: 100, planY: 70, planRot: 0, hotspots: [] } satisfies AdminScene;
       });
       return { ...d, scenes: [...d.scenes, ...added] };
     });
@@ -282,7 +284,7 @@ export function TourEditor({ tour, types, unitRefs, library, uploads }: Props) {
       parking: draft.parking,
       status: "A",
       panorama: scenes[0] ? panoUrl(scenes[0].panorama) : "",
-      planRooms: tour.planRooms,
+      planRooms: draft.planRooms,
       scenes: scenes.map((x) => ({
         id: x.key,
         name: x.name,
@@ -290,6 +292,7 @@ export function TourEditor({ tour, types, unitRefs, library, uploads }: Props) {
         note: x.note,
         plan: [x.planX, x.planY],
         rot: x.rot,
+        planRot: x.planRot,
         yaw: x.yaw,
         pos: "50% 50%",
         panorama: panoUrl(x.panorama),
@@ -701,6 +704,15 @@ export function TourEditor({ tour, types, unitRefs, library, uploads }: Props) {
                 </div>
               </section>
             ) : null}
+            <MinimapPanel
+              rooms={draft.planRooms}
+              scenes={scenes}
+              cur={cur}
+              type={draft.type}
+              planRooms={types.find((t) => t.type === draft.type)?.rooms ?? []}
+              onRooms={(planRooms) => set("planRooms", planRooms)}
+              onScenes={(next) => set("scenes", next)}
+            />
             <TourSettings draft={draft} set={set} types={types} refs={refsForType} onDelete={remove} pending={pending} />
           </aside>
         </div>

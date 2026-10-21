@@ -320,6 +320,8 @@ export const tourScenes = pgTable(
     rot: real("rot").notNull().default(0),
     planX: real("plan_x").notNull().default(100),
     planY: real("plan_y").notNull().default(70),
+    /** Added to the view direction to point the minimap cone (deg): aligns the panorama with the plan */
+    planRot: real("plan_rot").notNull().default(0),
     hotspots: jsonb("hotspots").$type<TourHotspotRow[]>().notNull().default([]),
   },
   (t) => [uniqueIndex("tour_scenes_key").on(t.tourId, t.key), index("tour_scenes_sort").on(t.tourId, t.sort)],

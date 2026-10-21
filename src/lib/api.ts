@@ -233,6 +233,7 @@ async function loadTours(id?: string): Promise<Tour[]> {
       note: x.note,
       plan: [x.planX, x.planY],
       rot: x.rot,
+      planRot: x.planRot,
       yaw: x.yaw,
       pos: "50% 50%",
       panorama: panoUrl(x.panorama),

@@ -345,4 +345,74 @@ test.describe("360° tours", () => {
     const left = (await sql!`select count(*)::int n from tours where id = ${id}`) as { n: number }[];
     expect(left[0].n).toBe(0);
   });
+
+  test("minimap: draw the rooms from the floor plan, place a scene and point its view", async ({ page, browser }) => {
+    test.setTimeout(120_000);
+    const t = tag();
+    const type = `E2E Type M${t}`;
+    const id = `bp-e2e-${t}`;
+    const title = `E2E Minimap ${t}`;
+    // A layout with room sizes and a draft tour with two scenes, in a project without unit inventory.
+    const rooms = [
+      { name: "Living Room", w: 6.5, l: 4.8 },
+      { name: "Kitchen", w: 3.6, l: 3 },
+      { name: "Bedroom", w: 4, l: 3.6 },
+      { name: "Balcony", w: 6, l: 1.8 },
+    ];
+    await sql!`insert into floor_plans (project_slug, key, type, label, sqft, rooms) values ('battaramulla-park', ${`M${t}`.slice(0, 8).toUpperCase()}, ${type}, '2 Bed', 1200, ${JSON.stringify(rooms)}::jsonb)`;
+    await sql!`insert into tours (id, project_slug, type, title, source, published) values (${id}, 'battaramulla-park', ${type}, ${title}, 'pano', false)`;
+    await sql!`insert into tour_scenes (tour_id, key, name, short, sort, panorama, thumb) values
+      (${id}, 'living-room', 'Living Room', 'Living', 0, '/tours/ovr-type-c/living.jpg', '/tours/ovr-type-c/living-thumb.jpg'),
+      (${id}, 'kitchen', 'Kitchen', 'Kitchen', 1, '/tours/ovr-type-c/kitchen.jpg', '/tours/ovr-type-c/kitchen-thumb.jpg')`;
+    try {
+      await signIn(page, `/admin/tours/${id}`);
+      const mini = page.getByRole("region", { name: "Floor plan minimap" });
+      await expect(mini.getByText("No rooms yet. Draw them from the floor plan.")).toBeVisible();
+      await mini.getByRole("button", { name: `Draw from ${type} floor plan` }).click();
+      await expect(page.getByText(`4 rooms drawn from the ${type} floor plan · 2 linked to scenes`)).toBeVisible();
+      await expect(mini.getByLabel("Scene for LIVING ROOM")).toHaveValue("living-room");
+      await expect(mini.getByLabel("Scene for KITCHEN")).toHaveValue("kitchen");
+      await expect(mini.getByLabel("Scene for BEDROOM")).toHaveValue("");
+
+      // Place Living Room in the middle of the plan and point its starting view 30° right.
+      const map = mini.getByRole("img", { name: "Minimap. Click to place Living Room" });
+      await map.click();
+      await mini.getByRole("button", { name: "Turn right 15°" }).click();
+      await mini.getByRole("button", { name: "Turn right 15°" }).click();
+      await expect(mini.getByLabel(/Starting view points/)).toHaveValue("30");
+      await page.screenshot({ path: `${SHOTS}/tour-minimap.png`, fullPage: true });
+
+      await page.getByRole("button", { name: "Save", exact: true }).click();
+      await expect(page.getByText("Saved as draft")).toBeVisible({ timeout: 60_000 });
+      const [tour] = (await sql!`select plan_rooms from tours where id = ${id}`) as { plan_rooms: { id: string; x: number; y: number; w: number; h: number; outdoor?: boolean }[] }[];
+      expect(tour.plan_rooms.map((r) => r.id).sort()).toEqual(["kitchen", "living-room", "room-balcony", "room-bedroom"]);
+      expect(tour.plan_rooms.find((r) => r.id === "room-balcony")?.outdoor).toBe(true);
+      for (const r of tour.plan_rooms) {
+        expect(r.x + r.w).toBeLessThanOrEqual(200.1);
+        expect(r.y + r.h).toBeLessThanOrEqual(140.1);
+      }
+      const [living, kitchen] = (await sql!`select plan_x, plan_y, plan_rot from tour_scenes where tour_id = ${id} order by sort`) as { plan_x: number; plan_y: number; plan_rot: number }[];
+      expect(Math.abs(living.plan_x - 100)).toBeLessThan(3);
+      expect(Math.abs(living.plan_y - 70)).toBeLessThan(3);
+      expect(living.plan_rot).toBe(30);
+      // Kitchen was moved into the middle of its room when the plan was drawn.
+      const room = tour.plan_rooms.find((r) => r.id === "kitchen")!;
+      expect(kitchen.plan_x).toBeCloseTo(room.x + room.w / 2, 0);
+      expect(kitchen.plan_y).toBeCloseTo(room.y + room.h / 2, 0);
+
+      // The website draws the same rooms.
+      await page.getByRole("button", { name: "Publish" }).click();
+      await expect(page.getByText(`${title} is live on the website`)).toBeVisible({ timeout: 60_000 });
+      const site = await browser.newPage();
+      await site.goto(`/tours/${id}`);
+      const plan = site.locator('svg[aria-label^="Floor plan, you are in"]').first();
+      await expect(plan.locator("rect")).toHaveCount(4);
+      await expect(plan.locator("text", { hasText: "KITCHEN" })).toHaveCount(1);
+      await site.close();
+    } finally {
+      await sql!`delete from tours where id = ${id}`;
+      await sql!`delete from floor_plans where type = ${type}`;
+      await sql!`delete from activity where entity = 'tour' and ref = ${id}`;
+    }
+  });
 });

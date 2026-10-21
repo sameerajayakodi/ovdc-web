@@ -9,6 +9,7 @@ import { requireAdmin, type Admin } from "@/lib/admin/auth";
 import { slugify } from "@/lib/admin/format";
 import { embedSrc } from "@/lib/embed";
 import { TAGS } from "@/lib/cacheTags";
+import { MAP_H, MAP_W, roomId, type MiniRoom } from "@/lib/minimap";
 import type { ActionResult, AdminScene } from "@/lib/admin/types";
 
 function need() {
@@ -72,6 +73,8 @@ export interface TourDraft {
   bathrooms: string;
   parking: string;
   scenes: AdminScene[];
+  /** Minimap rooms (200 × 140 plan space); a room's id is the key of the scene it opens */
+  planRooms: MiniRoom[];
 }
 
 /** Saves the whole tour (settings and every scene) in one transaction. `publish` also changes visibility. */
@@ -122,8 +125,21 @@ export async function saveTour(id: string, draft: TourDraft, publish?: boolean):
       rot: num(s.rot, -180, 180),
       planX: num(s.planX, 0, 200),
       planY: num(s.planY, 0, 140),
+      planRot: wrapYaw(s.planRot ?? 0),
       hotspots,
     };
+  });
+
+  const ids = new Set<string>();
+  const planRooms: MiniRoom[] = (Array.isArray(draft.planRooms) ? draft.planRooms : []).slice(0, 30).flatMap((r) => {
+    const x = num(r.x, 0, MAP_W);
+    const y = num(r.y, 0, MAP_H);
+    const w = Math.min(num(r.w, 0, MAP_W), MAP_W - x);
+    const h = Math.min(num(r.h, 0, MAP_H), MAP_H - y);
+    const id = slugify(txt(r.id, 60)) || roomId(txt(r.label, 40), ids);
+    if (w < 2 || h < 2 || ids.has(id)) return [];
+    ids.add(id);
+    return [{ id, x, y, w, h, label: txt(r.label, 40).toUpperCase(), ...(r.outdoor ? { outdoor: true } : {}) }];
   });
 
   const published = publish ?? before.published;
@@ -150,6 +166,7 @@ export async function saveTour(id: string, draft: TourDraft, publish?: boolean):
         bedrooms: txt(draft.bedrooms, 40),
         bathrooms: txt(draft.bathrooms, 40),
         parking: txt(draft.parking, 60),
+        planRooms,
         published,
         updatedAt: new Date(),
       })

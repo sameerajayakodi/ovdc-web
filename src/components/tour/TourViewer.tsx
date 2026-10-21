@@ -266,7 +266,7 @@ export function TourViewer({ tour, embedded = false, backHref }: { tour: Tour; e
             node.style.opacity = vis ? "1" : "0";
             node.style.visibility = vis ? "visible" : "hidden";
           });
-          coneRefs.current.forEach((g) => g?.setAttribute("transform", `translate(${sc.plan[0]} ${sc.plan[1]}) rotate(${S.lon})`));
+          coneRefs.current.forEach((g) => g?.setAttribute("transform", `translate(${sc.plan[0]} ${sc.plan[1]}) rotate(${S.lon + (sc.planRot ?? 0)})`));
         };
         tick();
       } catch (e) {
@@ -318,7 +318,11 @@ export function TourViewer({ tour, embedded = false, backHref }: { tour: Tour; e
     },
     [scene, fading, panoFor, getTexture, applyScene],
   );
-  const goId = (id: string) => goTo(scenes.findIndex((x) => x.id === id));
+  // A minimap room without a scene of its own does nothing.
+  const goId = (id: string) => {
+    const i = scenes.findIndex((x) => x.id === id);
+    if (i >= 0) goTo(i);
+  };
 
   // gyroscope
   const oriRef = useRef<{ got: boolean; offset: number; handler: ((e: DeviceOrientationEvent) => void) | null }>({ got: false, offset: 0, handler: null });

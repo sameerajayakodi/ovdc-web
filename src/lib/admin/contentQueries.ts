@@ -1,7 +1,7 @@
 import "server-only";
 import { asc, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
-import type { FloorPlanRow, MediaRow, TourRow, TourSceneRow } from "@/db/schema";
+import type { FloorPlanRow, MediaRow, PlanRoom, TourRow, TourSceneRow } from "@/db/schema";
 import type { AdminMedia, AdminPlan, AdminScene, AdminTour, MediaUse } from "./types";
 
 /** Media library, floor plans and 360° tours reads for the console. Never cached; pages call requireAdmin() first. */
@@ -127,6 +127,7 @@ export function toAdminScene(s: TourSceneRow): AdminScene {
     rot: s.rot,
     planX: s.planX,
     planY: s.planY,
+    planRot: s.planRot,
     hotspots: s.hotspots ?? [],
   };
 }
@@ -185,12 +186,12 @@ export async function getAdminTour(id: string): Promise<AdminTour | null> {
 export async function getTourTargets() {
   const d = need();
   const [plans, units] = await Promise.all([
-    d.select({ slug: schema.floorPlans.projectSlug, type: schema.floorPlans.type, label: schema.floorPlans.label }).from(schema.floorPlans).orderBy(asc(schema.floorPlans.sort)),
+    d.select({ slug: schema.floorPlans.projectSlug, type: schema.floorPlans.type, label: schema.floorPlans.label, rooms: schema.floorPlans.rooms }).from(schema.floorPlans).orderBy(asc(schema.floorPlans.sort)),
     d.selectDistinct({ slug: schema.units.projectSlug, type: schema.units.type }).from(schema.units),
   ]);
-  const out: Record<string, { type: string; label: string }[]> = {};
-  for (const p of plans) (out[p.slug] ??= []).push({ type: p.type, label: p.label });
-  for (const u of units) if (!(out[u.slug] ??= []).some((x) => x.type === u.type)) out[u.slug].push({ type: u.type, label: "" });
+  const out: Record<string, { type: string; label: string; rooms: PlanRoom[] }[]> = {};
+  for (const p of plans) (out[p.slug] ??= []).push({ type: p.type, label: p.label, rooms: (p.rooms ?? []).map((r) => ({ name: r.name, w: r.w, l: r.l })) });
+  for (const u of units) if (!(out[u.slug] ??= []).some((x) => x.type === u.type)) out[u.slug].push({ type: u.type, label: "", rooms: [] });
   return out;
 }
 

@@ -29,6 +29,13 @@
       "when": 1792553666437,
       "tag": "0003_calm_champions",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792568900472,
+      "tag": "0004_great_quicksilver",
+      "breakpoints": true
     }
   ]
 }

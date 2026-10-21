@@ -194,6 +194,7 @@ export interface AdminScene {
   rot: number;
   planX: number;
   planY: number;
+  planRot: number;
   hotspots: TourHotspotRow[];
 }
 

@@ -1,0 +1,1 @@
+ALTER TABLE "tour_scenes" ADD COLUMN "plan_rot" real DEFAULT 0 NOT NULL;

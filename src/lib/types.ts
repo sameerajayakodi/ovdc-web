@@ -133,6 +133,8 @@ export interface TourScene {
   plan: [number, number];
   /** Rotation applied to the panorama sphere (deg) */
   rot: number;
+  /** Added to the view direction for the minimap cone (deg), so it matches the plan */
+  planRot?: number;
   /** Initial yaw (deg) */
   yaw: number;
   /** object-position for the filmstrip thumbnail */
